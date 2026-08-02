@@ -137,18 +137,20 @@ body {
   height: 210px;
 }
 .card-photos.single img {
-  height: 340px;
+  height: auto;
+  max-height: 640px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.03);
 }
-.note {
-  position: absolute;
-  bottom: -16px;
-  left: 16px;
-  background: white;
-  border-radius: 16px;
-  padding: 8px 14px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
-  font-size: 13px;
-  font-style: italic;
+.org-tag {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.06);
+  white-space: nowrap;
 }
 .card-body {
   padding: 24px;
