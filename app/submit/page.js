@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import Shell from "../../components/Shell";
 import { CATEGORIES } from "../../lib/categories";
+import { ORGANIZATIONS } from "../../lib/organizations";
 import { ImagePlus, X, Send, Check } from "lucide-react";
 
 const MAX_IMAGES = 3;
@@ -33,7 +34,7 @@ function resizeImage(file, maxWidth = 900, quality = 0.72) {
 }
 
 export default function SubmitPage() {
-  const [form, setForm] = useState({ name: "", category: CATEGORIES[0].id, title: "", text: "" });
+  const [form, setForm] = useState({ name: "", category: CATEGORIES[0].id, org: "", title: "", text: "" });
   const [images, setImages] = useState([]);
   const [aiPolish, setAiPolish] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -61,8 +62,8 @@ export default function SubmitPage() {
   const submit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.text.trim()) {
-      setError("Schrijf een kort tekstje bij je bijdrage.");
+    if (!form.text.trim() && images.length === 0) {
+      setError("Voeg een tekstje toe, of upload een foto (bijvoorbeeld een poster).");
       return;
     }
     setBusy(true);
@@ -80,7 +81,7 @@ export default function SubmitPage() {
 
       let finalText = form.text.trim();
       let wasPolished = false;
-      if (aiPolish) {
+      if (aiPolish && finalText) {
         try {
           const pr = await fetch("/api/polish", {
             method: "POST",
@@ -103,6 +104,7 @@ export default function SubmitPage() {
         body: JSON.stringify({
           name: form.name,
           category: form.category,
+          org: form.org,
           title: form.title,
           text: finalText,
           images: uploadedUrls,
@@ -130,7 +132,7 @@ export default function SubmitPage() {
             className="btn"
             onClick={() => {
               setDone(false);
-              setForm({ name: "", category: CATEGORIES[0].id, title: "", text: "" });
+              setForm({ name: "", category: CATEGORIES[0].id, org: "", title: "", text: "" });
               setImages([]);
             }}
           >
@@ -140,7 +142,7 @@ export default function SubmitPage() {
       ) : (
         <form className="panel" onSubmit={submit}>
           <h2>Deel iets met de wijk</h2>
-          <p className="sub">Een foto en een kort verhaaltje is al genoeg.</p>
+          <p className="sub">Een foto (bijvoorbeeld een poster) en/of een kort verhaaltje is al genoeg.</p>
 
           <label className="field-label">Je naam</label>
           <input
@@ -149,12 +151,25 @@ export default function SubmitPage() {
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="Voornaam Achternaam"
           />
+          <p className="hint" style={{ marginTop: -10, marginBottom: 16 }}>
+            Alleen zichtbaar voor de redactie, niet in de wijkkrant zelf.
+          </p>
 
           <label className="field-label">Categorie</label>
           <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
             {CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.label}
+              </option>
+            ))}
+          </select>
+
+          <label className="field-label">Vereniging (optioneel)</label>
+          <select value={form.org} onChange={(e) => setForm((f) => ({ ...f, org: e.target.value }))}>
+            <option value="">Geen / niet van toepassing</option>
+            {ORGANIZATIONS.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
               </option>
             ))}
           </select>
@@ -167,7 +182,7 @@ export default function SubmitPage() {
             placeholder="Een korte, pakkende titel"
           />
 
-          <label className="field-label">Je verhaal</label>
+          <label className="field-label">Je verhaal (optioneel bij een poster)</label>
           <textarea
             rows={5}
             value={form.text}
