@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Shell from "../components/Shell";
 import { CATEGORIES, catInfo } from "../lib/categories";
 import { orgInfo } from "../lib/organizations";
-import { Sparkles } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 
 const MONTHS = [
   "januari", "februari", "maart", "april", "mei", "juni",
@@ -15,7 +15,7 @@ function fmtDate(iso) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function PostCard({ post }) {
+function PostCard({ post, onImageClick }) {
   const c = catInfo(post.category);
   const org = post.org ? orgInfo(post.org) : null;
   const hasImages = post.images && post.images.length > 0;
@@ -28,7 +28,13 @@ function PostCard({ post }) {
           style={{ gridTemplateColumns: post.images.length > 1 ? "1fr 1fr" : "1fr" }}
         >
           {post.images.slice(0, 3).map((src, i) => (
-            <img key={i} src={src} alt="" />
+            <img
+              key={i}
+              src={src}
+              alt=""
+              onClick={() => onImageClick(src)}
+              style={{ cursor: "zoom-in" }}
+            />
           ))}
         </div>
       )}
@@ -55,6 +61,7 @@ export default function HomePage() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cat, setCat] = useState("all");
+  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     fetch("/api/posts")
@@ -65,6 +72,15 @@ export default function HomePage() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setLightbox(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [lightbox]);
 
   const sorted = [...posts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const usedCats = CATEGORIES.filter((c) => sorted.some((p) => p.category === c.id));
@@ -99,10 +115,19 @@ export default function HomePage() {
           </div>
           <div className="feed">
             {filtered.map((p) => (
-              <PostCard key={p.id} post={p} />
+              <PostCard key={p.id} post={p} onImageClick={setLightbox} />
             ))}
           </div>
         </>
+      )}
+
+      {lightbox && (
+        <div className="lightbox" onClick={() => setLightbox(null)}>
+          <button className="lightbox-close" onClick={() => setLightbox(null)}>
+            <X size={22} />
+          </button>
+          <img src={lightbox} alt="" onClick={(e) => e.stopPropagation()} />
+        </div>
       )}
     </Shell>
   );
