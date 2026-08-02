@@ -147,7 +147,7 @@ export default function SubmitPage() {
             type="text"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="Bijv. Nora Broekman"
+            placeholder="Voornaam Achternaam"
           />
 
           <label className="field-label">Categorie</label>
@@ -164,7 +164,7 @@ export default function SubmitPage() {
             type="text"
             value={form.title}
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            placeholder="Bijv. Jorick gedoopt"
+            placeholder="Een korte, pakkende titel"
           />
 
           <label className="field-label">Je verhaal</label>
