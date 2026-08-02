@@ -410,3 +410,37 @@ textarea {
   color: rgba(0, 0, 0, 0.4);
   margin-top: 10px;
 }
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+  cursor: zoom-out;
+}
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: default;
+}
+.lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  border-radius: 999px;
+  padding: 10px;
+  cursor: pointer;
+  line-height: 0;
+}
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
