@@ -582,3 +582,29 @@ textarea {
   color: var(--brand);
   margin-top: 6px;
 }
+
+/* Taal-knop (NL/EN) */
+.lang-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: white;
+  color: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+.lang-btn.active {
+  background: var(--brand);
+  color: white;
+  border-color: var(--brand);
+}

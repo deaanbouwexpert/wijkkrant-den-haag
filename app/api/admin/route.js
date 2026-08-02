@@ -16,7 +16,15 @@ export async function PATCH(req) {
   }
   const { id, updates } = await req.json();
   const posts = await getPosts();
-  const next = posts.map((p) => (p.id === id ? { ...p, ...updates } : p));
+  const next = posts.map((p) => {
+    if (p.id !== id) return p;
+    const merged = { ...p, ...updates };
+    // Als titel/tekst is aangepast, zijn eerder gecachte vertalingen niet meer betrouwbaar.
+    if ("title" in updates || "text" in updates) {
+      delete merged.translations;
+    }
+    return merged;
+  });
   await setPosts(next);
   return NextResponse.json({ ok: true });
 }
