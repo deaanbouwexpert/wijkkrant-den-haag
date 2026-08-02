@@ -23,7 +23,6 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
-  const [newPw, setNewPw] = useState("");
   const [toast, setToast] = useState("");
 
   useEffect(() => {
@@ -114,21 +113,6 @@ export default function AdminPage() {
     setDraft(null);
     showToast("Wijzigingen opgeslagen.");
     reload();
-  };
-
-  const changePassword = async () => {
-    if (!newPw.trim()) return;
-    const res = await fetch("/api/admin/password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": pw },
-      body: JSON.stringify({ newPassword: newPw }),
-    });
-    if (res.ok) {
-      setPw(newPw);
-      sessionStorage.setItem("wk_admin_pw", newPw);
-      setNewPw("");
-      showToast("Wachtwoord gewijzigd.");
-    }
   };
 
   const pending = posts
@@ -253,22 +237,6 @@ export default function AdminPage() {
               </button>
             </div>
           ))}
-
-          <div className="panel" style={{ marginTop: 32 }}>
-            <h2 style={{ fontSize: 15 }}>Redacteurswachtwoord wijzigen</h2>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                type="text"
-                value={newPw}
-                onChange={(e) => setNewPw(e.target.value)}
-                placeholder="Nieuw wachtwoord"
-                style={{ marginBottom: 0 }}
-              />
-              <button className="btn" onClick={changePassword}>
-                Wijzigen
-              </button>
-            </div>
-          </div>
         </div>
       )}
       {toast && <div className="toast">{toast}</div>}
