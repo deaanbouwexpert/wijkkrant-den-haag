@@ -1,18 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import Shell from "../components/Shell";
+import { useLang } from "../components/LangProvider";
 import { CATEGORIES, catInfo } from "../lib/categories";
 import { orgInfo } from "../lib/organizations";
-import { Sparkles, X, Languages } from "lucide-react";
+import { t, MONTHS } from "../lib/i18n";
+import { Sparkles, X } from "lucide-react";
 
-const MONTHS = [
-  "januari", "februari", "maart", "april", "mei", "juni",
-  "juli", "augustus", "september", "oktober", "november", "december",
-];
-
-function fmtDate(iso) {
+function fmtDate(iso, lang) {
   const d = new Date(iso);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  return `${d.getDate()} ${MONTHS[lang][d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function PostCard({ post, lang, translating, onImageClick }) {
@@ -20,9 +17,9 @@ function PostCard({ post, lang, translating, onImageClick }) {
   const org = post.org ? orgInfo(post.org, lang) : null;
   const hasImages = post.images && post.images.length > 0;
   const isSinglePoster = hasImages && post.images.length === 1;
-  const t = lang !== "nl" ? post.translations?.[lang] : null;
-  const title = t?.title || post.title;
-  const text = t?.text || post.text;
+  const tr = lang !== "nl" ? post.translations?.[lang] : null;
+  const title = tr?.title || post.title;
+  const text = tr?.text || post.text;
   return (
     <article className="card" style={{ background: c.paper }}>
       {hasImages && (
@@ -47,7 +44,7 @@ function PostCard({ post, lang, translating, onImageClick }) {
             {c.label}
           </span>
           {org && <span className="org-tag">{org.label}</span>}
-          <span className="card-date">{fmtDate(post.createdAt)}</span>
+          <span className="card-date">{fmtDate(post.createdAt, lang)}</span>
         </div>
         {title && (
           <h3 className="card-title" style={{ color: c.color }}>
@@ -55,9 +52,9 @@ function PostCard({ post, lang, translating, onImageClick }) {
           </h3>
         )}
         {text && <p className="card-text">{text}</p>}
-        {lang !== "nl" && translating && !t && (
+        {lang !== "nl" && translating && !tr && (
           <p className="hint" style={{ marginTop: 8 }}>
-            Vertalen...
+            {t(lang, "translating")}
           </p>
         )}
       </div>
@@ -66,11 +63,11 @@ function PostCard({ post, lang, translating, onImageClick }) {
 }
 
 export default function HomePage() {
+  const [lang] = useLang();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cat, setCat] = useState("all");
   const [lightbox, setLightbox] = useState(null);
-  const [lang, setLang] = useState("nl");
   const [translatingIds, setTranslatingIds] = useState({});
 
   useEffect(() => {
@@ -132,33 +129,19 @@ export default function HomePage() {
 
   return (
     <Shell active="public">
-      {!loading && posts.length > 0 && (
-        <div className="lang-toggle">
-          <button className={`lang-btn ${lang === "nl" ? "active" : ""}`} onClick={() => setLang("nl")}>
-            🇳🇱 Nederlands
-          </button>
-          <button className={`lang-btn ${lang === "en" ? "active" : ""}`} onClick={() => setLang("en")}>
-            <Languages size={13} /> English
-          </button>
-        </div>
-      )}
       {loading ? (
-        <p style={{ textAlign: "center", color: "rgba(0,0,0,0.4)" }}>
-          {lang === "en" ? "Loading..." : "Even laden..."}
-        </p>
+        <p style={{ textAlign: "center", color: "rgba(0,0,0,0.4)" }}>{t(lang, "loading")}</p>
       ) : posts.length === 0 ? (
         <div className="empty">
           <Sparkles size={26} style={{ marginBottom: 8, color: "#b9812f" }} />
-          <strong>{lang === "en" ? "No stories yet" : "Nog geen verhalen geplaatst"}</strong>
-          {lang === "en"
-            ? 'Send something in via "Something to share" to be the first!'
-            : 'Stuur iets in via "Iets insturen" om de eerste te zijn!'}
+          <strong>{t(lang, "emptyTitle")}</strong>
+          {t(lang, "emptyBody")}
         </div>
       ) : (
         <>
           <div className="filters">
             <button className={`pill ${cat === "all" ? "active-all" : ""}`} onClick={() => setCat("all")}>
-              {lang === "en" ? "All" : "Alles"}
+              {t(lang, "all")}
             </button>
             {usedCats.map((c) => {
               const ci = catInfo(c.id, lang);

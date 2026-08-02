@@ -1,17 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import Shell from "../../components/Shell";
+import { useLang } from "../../components/LangProvider";
+import { t, MONTHS } from "../../lib/i18n";
 import { BookOpen, Download } from "lucide-react";
-
-const MONTHS = [
-  "januari", "februari", "maart", "april", "mei", "juni",
-  "juli", "augustus", "september", "oktober", "november", "december",
-];
 
 const LANG_LABEL = { nl: "NL", en: "EN" };
 const CARD_COLORS = ["#eaf3f1", "#e9f0f7", "#faf3e6", "#eef3ea", "#f5eaf0", "#fbeaf0"];
 
 export default function ArchiefPage() {
+  const [lang] = useLang();
   const [archive, setArchive] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,18 +33,16 @@ export default function ArchiefPage() {
     <Shell active="archief">
       <div className="panel" style={{ maxWidth: 720, textAlign: "center", marginBottom: 28 }}>
         <BookOpen size={26} style={{ color: "#b9812f", marginBottom: 8 }} />
-        <h2>Archief</h2>
-        <p className="sub">
-          Blader terug door oudere edities van de wijkkrant — mooi om nog eens terug te lezen.
-        </p>
+        <h2>{t(lang, "archiveHeading")}</h2>
+        <p className="sub">{t(lang, "archiveSub")}</p>
       </div>
 
       {loading ? (
-        <p style={{ textAlign: "center", color: "rgba(0,0,0,0.4)" }}>Even laden...</p>
+        <p style={{ textAlign: "center", color: "rgba(0,0,0,0.4)" }}>{t(lang, "loading")}</p>
       ) : years.length === 0 ? (
         <div className="empty">
-          <strong>Nog geen oude edities toegevoegd</strong>
-          De redactie kan oude nieuwsbrieven toevoegen via de redactiepagina.
+          <strong>{t(lang, "archiveEmptyTitle")}</strong>
+          {t(lang, "archiveEmptyBody")}
         </div>
       ) : (
         years.map((year) => (
@@ -65,10 +61,10 @@ export default function ArchiefPage() {
                     style={{ background: CARD_COLORS[i % CARD_COLORS.length] }}
                   >
                     <span className="archive-flag">{LANG_LABEL[entry.lang] || entry.lang.toUpperCase()}</span>
-                    <span className="archive-month">{MONTHS[entry.month - 1]}</span>
+                    <span className="archive-month">{MONTHS[lang][entry.month - 1]}</span>
                     <span className="archive-title">{entry.title}</span>
                     <span className="archive-download">
-                      <Download size={14} /> Bekijk / download
+                      <Download size={14} /> {t(lang, "archiveDownload")}
                     </span>
                   </a>
                 ))}

@@ -1,8 +1,10 @@
 "use client";
 import { useRef, useState } from "react";
 import Shell from "../../components/Shell";
+import { useLang } from "../../components/LangProvider";
 import { CATEGORIES } from "../../lib/categories";
 import { ORGANIZATIONS } from "../../lib/organizations";
+import { t } from "../../lib/i18n";
 import { ImagePlus, X, Send, Check, Sparkles, Loader2 } from "lucide-react";
 
 const MAX_IMAGES = 6;
@@ -34,11 +36,12 @@ function resizeImage(file, maxWidth = 900, quality = 0.72) {
 }
 
 export default function SubmitPage() {
+  const [lang] = useLang();
   const [form, setForm] = useState({ name: "", category: CATEGORIES[0].id, org: "", title: "", text: "" });
   const [images, setImages] = useState([]);
   const [variants, setVariants] = useState(null);
   const [variantsBusy, setVariantsBusy] = useState(false);
-  const [chosenVariant, setChosenVariant] = useState(null); // id of chosen variant, or null = eigen tekst
+  const [chosenVariant, setChosenVariant] = useState(null);
   const [wasAiEdited, setWasAiEdited] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -55,7 +58,7 @@ export default function SubmitPage() {
       const resized = await Promise.all(list.map((f) => resizeImage(f)));
       setImages((prev) => [...prev, ...resized]);
     } catch {
-      setError("Een foto kon niet worden verwerkt. Probeer een andere foto.");
+      setError(t(lang, "errPhoto"));
     }
     setBusy(false);
   };
@@ -64,7 +67,7 @@ export default function SubmitPage() {
 
   const generateVariants = async () => {
     if (!form.text.trim()) {
-      setError("Schrijf eerst een tekstje, dan kan de AI er drie leuke versies van maken.");
+      setError(t(lang, "errNeedTextForAi"));
       return;
     }
     setError("");
@@ -79,7 +82,7 @@ export default function SubmitPage() {
       setVariants(data.variants || null);
       setChosenVariant(null);
     } catch {
-      setError("Het genereren van AI-suggesties is niet gelukt. Probeer het later opnieuw.");
+      setError(t(lang, "errAiFail"));
     }
     setVariantsBusy(false);
   };
@@ -99,7 +102,7 @@ export default function SubmitPage() {
     e.preventDefault();
     setError("");
     if (!form.text.trim() && images.length === 0) {
-      setError("Voeg een tekstje toe, of upload een foto (bijvoorbeeld een poster).");
+      setError(t(lang, "errNeedContent"));
       return;
     }
     setBusy(true);
@@ -132,7 +135,7 @@ export default function SubmitPage() {
       });
       setDone(true);
     } catch (e) {
-      setError("Versturen is niet gelukt. Controleer je verbinding en probeer opnieuw.");
+      setError(t(lang, "errSend"));
     }
     setBusy(false);
   };
@@ -142,11 +145,8 @@ export default function SubmitPage() {
       {done ? (
         <div className="panel" style={{ textAlign: "center" }}>
           <Check size={28} style={{ color: "#516b47", marginBottom: 8 }} />
-          <h2>Bedankt voor je bijdrage!</h2>
-          <p className="sub">
-            Je bericht wordt eerst bekeken door de redactie. Zodra het is goedgekeurd, verschijnt het in de
-            wijkkrant.
-          </p>
+          <h2>{t(lang, "thanksTitle")}</h2>
+          <p className="sub">{t(lang, "thanksBody")}</p>
           <button
             className="btn"
             onClick={() => {
@@ -158,53 +158,53 @@ export default function SubmitPage() {
               setWasAiEdited(false);
             }}
           >
-            Nog iets insturen
+            {t(lang, "submitAnother")}
           </button>
         </div>
       ) : (
         <form className="panel" onSubmit={submit}>
-          <h2>Deel iets met de wijk</h2>
-          <p className="sub">Een foto (bijvoorbeeld een poster) en/of een kort verhaaltje is al genoeg.</p>
+          <h2>{t(lang, "submitHeading")}</h2>
+          <p className="sub">{t(lang, "submitSub")}</p>
 
-          <label className="field-label">Je naam</label>
+          <label className="field-label">{t(lang, "yourName")}</label>
           <input
             type="text"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="Voornaam Achternaam"
+            placeholder={t(lang, "namePlaceholder")}
           />
           <p className="hint" style={{ marginTop: -10, marginBottom: 16 }}>
-            Alleen zichtbaar voor de redactie, niet in de wijkkrant zelf.
+            {t(lang, "nameHint")}
           </p>
 
-          <label className="field-label">Categorie</label>
+          <label className="field-label">{t(lang, "category")}</label>
           <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
             {CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.label}
+                {lang === "en" ? c.labelEn : c.label}
               </option>
             ))}
           </select>
 
-          <label className="field-label">Vereniging (optioneel)</label>
+          <label className="field-label">{t(lang, "org")}</label>
           <select value={form.org} onChange={(e) => setForm((f) => ({ ...f, org: e.target.value }))}>
-            <option value="">Geen / niet van toepassing</option>
+            <option value="">{t(lang, "orgNone")}</option>
             {ORGANIZATIONS.map((o) => (
               <option key={o.id} value={o.id}>
-                {o.label}
+                {lang === "en" ? o.labelEn : o.label}
               </option>
             ))}
           </select>
 
-          <label className="field-label">Titel (optioneel)</label>
+          <label className="field-label">{t(lang, "titleField")}</label>
           <input
             type="text"
             value={form.title}
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            placeholder="Een korte, pakkende titel"
+            placeholder={t(lang, "titlePlaceholder")}
           />
 
-          <label className="field-label">Je verhaal (optioneel bij een poster)</label>
+          <label className="field-label">{t(lang, "story")}</label>
           <textarea
             rows={5}
             value={form.text}
@@ -216,7 +216,7 @@ export default function SubmitPage() {
                 setWasAiEdited(false);
               }
             }}
-            placeholder="Vertel hier kort wat je wilt delen..."
+            placeholder={t(lang, "storyPlaceholder")}
           />
 
           <button
@@ -227,11 +227,10 @@ export default function SubmitPage() {
             disabled={variantsBusy}
           >
             {variantsBusy ? <Loader2 size={13} className="spin" /> : <Sparkles size={13} />}
-            {variantsBusy ? "AI schrijft drie versies..." : "Laat AI 3 gezellige versies voorstellen"}
+            {variantsBusy ? t(lang, "aiBusy") : t(lang, "aiButton")}
           </button>
           <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
-            De AI verbetert meteen ook de spelling. Jij kiest zelf een versie (of houdt je eigen tekst) — de
-            redactie bekijkt en keurt daarna alles nog goed.
+            {t(lang, "aiHint")}
           </p>
 
           {variants && (
@@ -241,7 +240,7 @@ export default function SubmitPage() {
                 className={`variant-card ${chosenVariant === null ? "variant-chosen" : ""}`}
                 onClick={keepOwnText}
               >
-                <span className="variant-label">Mijn eigen tekst</span>
+                <span className="variant-label">{t(lang, "ownText")}</span>
                 <span className="variant-text">{form.text}</span>
               </button>
               {variants.map((v) => (
@@ -259,7 +258,7 @@ export default function SubmitPage() {
           )}
 
           <label className="field-label">
-            Foto's ({images.length}/{MAX_IMAGES})
+            {t(lang, "photos")} ({images.length}/{MAX_IMAGES})
           </label>
           <div className="thumb-row">
             {images.map((src, i) => (
@@ -273,7 +272,7 @@ export default function SubmitPage() {
             {images.length < MAX_IMAGES && (
               <button type="button" className="thumb-add" onClick={() => fileRef.current?.click()} disabled={busy}>
                 <ImagePlus size={16} />
-                Toevoegen
+                {t(lang, "addPhoto")}
               </button>
             )}
           </div>
@@ -290,7 +289,7 @@ export default function SubmitPage() {
 
           <button type="submit" className="btn btn-full" disabled={busy}>
             <Send size={15} />
-            {busy ? "Even geduld..." : "Insturen ter beoordeling"}
+            {busy ? t(lang, "submitBusy") : t(lang, "submitBtn")}
           </button>
         </form>
       )}
