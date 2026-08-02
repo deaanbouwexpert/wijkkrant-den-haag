@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Shell from "../components/Shell";
 import { CATEGORIES, catInfo } from "../lib/categories";
+import { orgInfo } from "../lib/organizations";
 import { Sparkles } from "lucide-react";
 
 const MONTHS = [
@@ -16,18 +17,19 @@ function fmtDate(iso) {
 
 function PostCard({ post }) {
   const c = catInfo(post.category);
+  const org = post.org ? orgInfo(post.org) : null;
   const hasImages = post.images && post.images.length > 0;
+  const isSinglePoster = hasImages && post.images.length === 1;
   return (
     <article className="card" style={{ background: c.paper }}>
       {hasImages && (
         <div
-          className={`card-photos ${post.images.length === 1 ? "single" : ""}`}
+          className={`card-photos ${isSinglePoster ? "single" : ""}`}
           style={{ gridTemplateColumns: post.images.length > 1 ? "1fr 1fr" : "1fr" }}
         >
           {post.images.slice(0, 3).map((src, i) => (
             <img key={i} src={src} alt="" />
           ))}
-          <div className="note">{post.name || "Anoniem"}</div>
         </div>
       )}
       <div className={`card-body ${hasImages ? "with-photo" : ""}`}>
@@ -35,6 +37,7 @@ function PostCard({ post }) {
           <span className="tag" style={{ background: c.color }}>
             {c.label}
           </span>
+          {org && <span className="org-tag">{org.label}</span>}
           <span className="card-date">{fmtDate(post.createdAt)}</span>
         </div>
         {post.title && (
@@ -42,12 +45,7 @@ function PostCard({ post }) {
             {post.title}
           </h3>
         )}
-        <p className="card-text">{post.text}</p>
-        {!hasImages && (
-          <p className="hint" style={{ fontStyle: "italic" }}>
-            — {post.name || "Anoniem"}
-          </p>
-        )}
+        {post.text && <p className="card-text">{post.text}</p>}
       </div>
     </article>
   );
