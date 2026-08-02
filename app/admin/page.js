@@ -118,9 +118,7 @@ export default function AdminPage() {
       showToast("Alleen PDF-bestanden zijn toegestaan.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setArchiveFile({ name: f.name, dataUrl: reader.result });
-    reader.readAsDataURL(f);
+    setArchiveFile(f);
   };
 
   const uploadArchive = async (e) => {
@@ -130,19 +128,41 @@ export default function AdminPage() {
       return;
     }
     setArchiveBusy(true);
-    const res = await fetch("/api/archive", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": pw },
-      body: JSON.stringify({ ...archiveForm, file: archiveFile.dataUrl }),
-    });
-    if (res.ok) {
+    try {
+      // Stap 1: vraag een directe upload-link aan (bestand gaat hierdoor niet via onze eigen server).
+      const initRes = await fetch("/api/archive/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": pw },
+        body: JSON.stringify({ year: archiveForm.year, month: archiveForm.month, lang: archiveForm.lang }),
+      });
+      if (!initRes.ok) {
+        const d = await initRes.json().catch(() => ({}));
+        throw new Error(d.error || "Kon geen upload-link aanmaken.");
+      }
+      const { signedUrl, publicUrl } = await initRes.json();
+
+      // Stap 2: upload het PDF-bestand rechtstreeks naar de opslag.
+      const putRes = await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/pdf" },
+        body: archiveFile,
+      });
+      if (!putRes.ok) throw new Error("Uploaden naar de opslag is niet gelukt.");
+
+      // Stap 3: bewaar de titel/maand/jaar erbij.
+      const confirmRes = await fetch("/api/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": pw },
+        body: JSON.stringify({ ...archiveForm, publicUrl }),
+      });
+      if (!confirmRes.ok) throw new Error("Opslaan van de gegevens is niet gelukt.");
+
       showToast("Oude editie toegevoegd aan het archief.");
       setArchiveForm({ title: "", year: new Date().getFullYear(), month: 1, lang: "nl" });
       setArchiveFile(null);
       loadArchive();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      showToast(data.error || "Uploaden is niet gelukt.");
+    } catch (err) {
+      showToast(err.message || "Uploaden is niet gelukt.");
     }
     setArchiveBusy(false);
   };
