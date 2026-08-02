@@ -1,5 +1,6 @@
 import "./globals.css";
 import { LangProvider } from "../components/LangProvider";
+import { SettingsProvider } from "../components/SettingsProvider";
 
 export const metadata = {
   title: "Wijkkrant",
@@ -10,7 +11,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="nl">
       <body>
-        <LangProvider>{children}</LangProvider>
+        <LangProvider>
+          <SettingsProvider>{children}</SettingsProvider>
+        </LangProvider>
       </body>
     </html>
   );

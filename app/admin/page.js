@@ -1,9 +1,36 @@
 "use client";
 import { useEffect, useState } from "react";
 import Shell from "../../components/Shell";
+import { useSettings } from "../../components/SettingsProvider";
 import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
-import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud } from "lucide-react";
+import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X } from "lucide-react";
+
+function resizeImage(file, maxWidth = 1400, quality = 0.75) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxWidth) {
+          h = Math.round((h * maxWidth) / w);
+          w = maxWidth;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Kon afbeelding niet laden"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("Kon bestand niet lezen"));
+    reader.readAsDataURL(file);
+  });
+}
 
 const MONTHS = [
   "januari", "februari", "maart", "april", "mei", "juni",
@@ -28,6 +55,8 @@ export default function AdminPage() {
   const [archiveForm, setArchiveForm] = useState({ title: "", year: new Date().getFullYear(), month: 1, lang: "nl" });
   const [archiveFile, setArchiveFile] = useState(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
+  const [settings, , refreshSettings] = useSettings();
+  const [settingsBusy, setSettingsBusy] = useState(false);
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? sessionStorage.getItem("wk_admin_pw") : null;
@@ -178,6 +207,63 @@ export default function AdminPage() {
     });
     showToast("Verwijderd uit het archief.");
     loadArchive();
+  };
+
+  const saveSettings = async (updates) => {
+    setSettingsBusy(true);
+    const res = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) {
+      showToast("Uiterlijk opgeslagen.");
+      refreshSettings();
+    } else {
+      showToast("Opslaan van het uiterlijk is niet gelukt.");
+    }
+    setSettingsBusy(false);
+  };
+
+  const addHeaderPhotos = async (files) => {
+    const list = Array.from(files).slice(0, 5 - (settings.headerImages?.length || 0));
+    if (!list.length) return;
+    setSettingsBusy(true);
+    try {
+      const resized = await Promise.all(list.map((f) => resizeImage(f)));
+      const up = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: resized }),
+      });
+      const upData = await up.json();
+      const urls = upData.urls || [];
+      await saveSettings({ headerImages: [...(settings.headerImages || []), ...urls] });
+    } catch {
+      showToast("Foto('s) uploaden is niet gelukt.");
+      setSettingsBusy(false);
+    }
+  };
+
+  const removeHeaderPhoto = (url) => {
+    saveSettings({ headerImages: (settings.headerImages || []).filter((u) => u !== url) });
+  };
+
+  const uploadPageBackgroundImage = async (file) => {
+    setSettingsBusy(true);
+    try {
+      const resized = await resizeImage(file, 1800, 0.75);
+      const up = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: [resized] }),
+      });
+      const upData = await up.json();
+      await saveSettings({ pageBackgroundImage: upData.urls?.[0] || null });
+    } catch {
+      showToast("Achtergrondfoto uploaden is niet gelukt.");
+      setSettingsBusy(false);
+    }
   };
 
   const startEdit = (p) => {
@@ -387,6 +473,82 @@ export default function AdminPage() {
               </button>
             </div>
           ))}
+
+          <div className="section-title" style={{ marginTop: 32 }}>
+            <Palette size={18} /> Website-uiterlijk
+          </div>
+          <div className="admin-post">
+            <label className="field-label">Foto('s) bovenin (bijv. de tempel, of iets feestelijks)</label>
+            <p className="hint" style={{ marginTop: -4 }}>
+              1 foto vult de hele header. Vanaf 2 foto's krijgt de header meer ruimte en verschijnen ze als een
+              leuk fotorijtje.
+            </p>
+            <div className="thumb-row" style={{ marginTop: 10 }}>
+              {(settings.headerImages || []).map((src) => (
+                <div className="thumb" key={src}>
+                  <img src={src} alt="" />
+                  <button type="button" onClick={() => removeHeaderPhoto(src)}>
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              {(settings.headerImages || []).length < 5 && (
+                <label className="thumb-add" style={{ cursor: settingsBusy ? "wait" : "pointer" }}>
+                  <ImagePlus size={16} />
+                  Toevoegen
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    disabled={settingsBusy}
+                    onChange={(e) => e.target.files && addHeaderPhotos(e.target.files)}
+                  />
+                </label>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 20, marginTop: 20, flexWrap: "wrap" }}>
+              <div>
+                <label className="field-label">Achtergrondkleur wijkkrant</label>
+                <input
+                  type="color"
+                  value={settings.pageBackgroundColor || "#f5efe6"}
+                  onChange={(e) => saveSettings({ pageBackgroundColor: e.target.value })}
+                  style={{ width: 60, height: 36, border: "none", background: "none", cursor: "pointer" }}
+                />
+              </div>
+              <div>
+                <label className="field-label">Achtergrondkleur redactiepagina</label>
+                <input
+                  type="color"
+                  value={settings.adminBackgroundColor || "#e7edf3"}
+                  onChange={(e) => saveSettings({ adminBackgroundColor: e.target.value })}
+                  style={{ width: 60, height: 36, border: "none", background: "none", cursor: "pointer" }}
+                />
+              </div>
+            </div>
+
+            <label className="field-label" style={{ marginTop: 20, display: "block" }}>
+              Achtergrondfoto wijkkrant (optioneel, i.p.v. een kleur)
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => e.target.files?.[0] && uploadPageBackgroundImage(e.target.files[0])}
+              />
+              {settings.pageBackgroundImage && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  onClick={() => saveSettings({ pageBackgroundImage: null })}
+                >
+                  <X size={12} /> Achtergrondfoto verwijderen
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
       {toast && <div className="toast">{toast}</div>}
