@@ -27,7 +27,7 @@ function PostCard({ post, onImageClick }) {
           className={`card-photos ${isSinglePoster ? "single" : ""}`}
           style={{ gridTemplateColumns: post.images.length > 1 ? "1fr 1fr" : "1fr" }}
         >
-          {post.images.slice(0, 3).map((src, i) => (
+          {post.images.map((src, i) => (
             <img
               key={i}
               src={src}
