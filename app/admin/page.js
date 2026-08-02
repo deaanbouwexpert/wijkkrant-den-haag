@@ -155,7 +155,10 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json", "x-admin-password": pw },
         body: JSON.stringify({ ...archiveForm, publicUrl }),
       });
-      if (!confirmRes.ok) throw new Error("Opslaan van de gegevens is niet gelukt.");
+      if (!confirmRes.ok) {
+        const d = await confirmRes.json().catch(() => ({}));
+        throw new Error(d.error || "Opslaan van de gegevens is niet gelukt.");
+      }
 
       showToast("Oude editie toegevoegd aan het archief.");
       setArchiveForm({ title: "", year: new Date().getFullYear(), month: 1, lang: "nl" });
