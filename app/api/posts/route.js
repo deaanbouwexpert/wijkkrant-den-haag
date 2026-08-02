@@ -3,16 +3,21 @@ import { getPosts, setPosts } from "../../../lib/kv";
 
 export async function GET() {
   const posts = await getPosts();
-  const published = posts.filter((p) => p.status === "published");
+  const published = posts
+    .filter((p) => p.status === "published")
+    .map(({ name, ...rest }) => rest); // naam van de inzender blijft prive, alleen redactie ziet die
   return NextResponse.json({ posts: published });
 }
 
 export async function POST(req) {
   const body = await req.json();
-  const { name, category, title, text, images, polished } = body;
+  const { name, category, org, title, text, images, polished } = body;
 
-  if (!text || !text.trim()) {
-    return NextResponse.json({ error: "Tekst is verplicht." }, { status: 400 });
+  const hasText = text && text.trim();
+  const hasImages = Array.isArray(images) && images.length > 0;
+
+  if (!hasText && !hasImages) {
+    return NextResponse.json({ error: "Voeg tekst of een foto toe." }, { status: 400 });
   }
 
   const posts = await getPosts();
@@ -20,8 +25,9 @@ export async function POST(req) {
     id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     name: (name || "Anoniem").trim(),
     category: category || "anders",
+    org: org || "",
     title: (title || "").trim(),
-    text: text.trim(),
+    text: (text || "").trim(),
     aiPolished: !!polished,
     images: Array.isArray(images) ? images : [],
     status: "pending",
