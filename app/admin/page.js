@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Shell from "../../components/Shell";
 import { CATEGORIES, catInfo } from "../../lib/categories";
+import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
 import { Lock, Clock, Check, Pencil, Trash2 } from "lucide-react";
 
 const MONTHS = [
@@ -100,7 +101,7 @@ export default function AdminPage() {
 
   const startEdit = (p) => {
     setEditingId(p.id);
-    setDraft({ ...p });
+    setDraft({ ...p, org: p.org || "" });
   };
 
   const saveEdit = async () => {
@@ -173,6 +174,14 @@ export default function AdminPage() {
                       </option>
                     ))}
                   </select>
+                  <select value={draft.org} onChange={(e) => setDraft((d) => ({ ...d, org: e.target.value }))}>
+                    <option value="">Geen vereniging</option>
+                    {ORGANIZATIONS.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
                   <input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
                   <textarea
                     rows={4}
@@ -194,7 +203,7 @@ export default function AdminPage() {
                     {catInfo(p.category).label}
                   </span>
                   <p className="hint">
-                    {p.name} • {fmtDate(p.createdAt)}
+                    {p.name} • {orgInfo(p.org)?.label || "Geen vereniging"} • {fmtDate(p.createdAt)}
                     {p.aiPolished ? " • spelling gecontroleerd door AI" : ""}
                   </p>
                   {p.images?.length > 0 && (
