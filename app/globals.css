@@ -444,3 +444,141 @@ textarea {
 .lightbox-close:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+/* Extra gezelligheid: lichte kanteling op meerdere foto's, net als in een plakboek */
+.card-photos img:nth-child(odd) {
+  transform: rotate(-0.6deg);
+}
+.card-photos img:nth-child(even) {
+  transform: rotate(0.6deg);
+}
+.card {
+  position: relative;
+}
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 24px;
+  width: 46px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  transform: rotate(-3deg) translateY(-6px);
+  border-radius: 2px;
+  z-index: 2;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* AI-suggesties (drie versies) */
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.variant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.variant-card {
+  text-align: left;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  background: white;
+  border-radius: 16px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.variant-card:hover {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+.variant-chosen {
+  border-color: var(--brand);
+  background: #f2f7f0;
+}
+.variant-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--brand);
+  margin-bottom: 4px;
+}
+.variant-text {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.75);
+  white-space: pre-wrap;
+}
+
+/* Archief */
+.archive-year {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--brand);
+  margin: 0 0 12px;
+}
+.archive-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 560px) {
+  .archive-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.archive-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px;
+  border-radius: 20px;
+  text-decoration: none;
+  color: var(--ink);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s ease;
+}
+.archive-card:hover {
+  transform: translateY(-2px);
+}
+.archive-flag {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.archive-month {
+  text-transform: capitalize;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.5);
+}
+.archive-title {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 18px;
+}
+.archive-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+  margin-top: 6px;
+}

@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import Shell from "../../components/Shell";
 import { CATEGORIES } from "../../lib/categories";
 import { ORGANIZATIONS } from "../../lib/organizations";
-import { ImagePlus, X, Send, Check } from "lucide-react";
+import { ImagePlus, X, Send, Check, Sparkles, Loader2 } from "lucide-react";
 
 const MAX_IMAGES = 6;
 
@@ -36,7 +36,10 @@ function resizeImage(file, maxWidth = 900, quality = 0.72) {
 export default function SubmitPage() {
   const [form, setForm] = useState({ name: "", category: CATEGORIES[0].id, org: "", title: "", text: "" });
   const [images, setImages] = useState([]);
-  const [aiPolish, setAiPolish] = useState(true);
+  const [variants, setVariants] = useState(null);
+  const [variantsBusy, setVariantsBusy] = useState(false);
+  const [chosenVariant, setChosenVariant] = useState(null); // id of chosen variant, or null = eigen tekst
+  const [wasAiEdited, setWasAiEdited] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
@@ -59,6 +62,39 @@ export default function SubmitPage() {
 
   const removeImage = (i) => setImages((prev) => prev.filter((_, idx) => idx !== i));
 
+  const generateVariants = async () => {
+    if (!form.text.trim()) {
+      setError("Schrijf eerst een tekstje, dan kan de AI er drie leuke versies van maken.");
+      return;
+    }
+    setError("");
+    setVariantsBusy(true);
+    try {
+      const res = await fetch("/api/polish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: form.text.trim(), mode: "variants" }),
+      });
+      const data = await res.json();
+      setVariants(data.variants || null);
+      setChosenVariant(null);
+    } catch {
+      setError("Het genereren van AI-suggesties is niet gelukt. Probeer het later opnieuw.");
+    }
+    setVariantsBusy(false);
+  };
+
+  const chooseVariant = (v) => {
+    setForm((f) => ({ ...f, text: v.text }));
+    setChosenVariant(v.id);
+    setWasAiEdited(true);
+  };
+
+  const keepOwnText = () => {
+    setVariants(null);
+    setChosenVariant(null);
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError("");
@@ -79,24 +115,7 @@ export default function SubmitPage() {
         uploadedUrls = upData.urls || [];
       }
 
-      let finalText = form.text.trim();
-      let wasPolished = false;
-      if (aiPolish && finalText) {
-        try {
-          const pr = await fetch("/api/polish", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: finalText }),
-          });
-          const pd = await pr.json();
-          if (pd.polished) {
-            finalText = pd.polished;
-            wasPolished = true;
-          }
-        } catch {
-          /* geen probleem, gaan verder met originele tekst */
-        }
-      }
+      const finalText = form.text.trim();
 
       await fetch("/api/posts", {
         method: "POST",
@@ -108,7 +127,7 @@ export default function SubmitPage() {
           title: form.title,
           text: finalText,
           images: uploadedUrls,
-          polished: wasPolished,
+          polished: wasAiEdited,
         }),
       });
       setDone(true);
@@ -134,6 +153,9 @@ export default function SubmitPage() {
               setDone(false);
               setForm({ name: "", category: CATEGORIES[0].id, org: "", title: "", text: "" });
               setImages([]);
+              setVariants(null);
+              setChosenVariant(null);
+              setWasAiEdited(false);
             }}
           >
             Nog iets insturen
@@ -186,9 +208,55 @@ export default function SubmitPage() {
           <textarea
             rows={5}
             value={form.text}
-            onChange={(e) => setForm((f) => ({ ...f, text: e.target.value }))}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, text: e.target.value }));
+              if (variants) {
+                setVariants(null);
+                setChosenVariant(null);
+                setWasAiEdited(false);
+              }
+            }}
             placeholder="Vertel hier kort wat je wilt delen..."
           />
+
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            style={{ marginTop: -8, marginBottom: 18 }}
+            onClick={generateVariants}
+            disabled={variantsBusy}
+          >
+            {variantsBusy ? <Loader2 size={13} className="spin" /> : <Sparkles size={13} />}
+            {variantsBusy ? "AI schrijft drie versies..." : "Laat AI 3 gezellige versies voorstellen"}
+          </button>
+          <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
+            De AI verbetert meteen ook de spelling. Jij kiest zelf een versie (of houdt je eigen tekst) — de
+            redactie bekijkt en keurt daarna alles nog goed.
+          </p>
+
+          {variants && (
+            <div className="variant-list">
+              <button
+                type="button"
+                className={`variant-card ${chosenVariant === null ? "variant-chosen" : ""}`}
+                onClick={keepOwnText}
+              >
+                <span className="variant-label">Mijn eigen tekst</span>
+                <span className="variant-text">{form.text}</span>
+              </button>
+              {variants.map((v) => (
+                <button
+                  type="button"
+                  key={v.id}
+                  className={`variant-card ${chosenVariant === v.id ? "variant-chosen" : ""}`}
+                  onClick={() => chooseVariant(v)}
+                >
+                  <span className="variant-label">{v.label}</span>
+                  <span className="variant-text">{v.text}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           <label className="field-label">
             Foto's ({images.length}/{MAX_IMAGES})
@@ -217,19 +285,6 @@ export default function SubmitPage() {
             hidden
             onChange={(e) => e.target.files && addFiles(e.target.files)}
           />
-
-          <div className="checkbox-row">
-            <input
-              type="checkbox"
-              id="aipolish"
-              checked={aiPolish}
-              onChange={(e) => setAiPolish(e.target.checked)}
-              style={{ marginTop: 2 }}
-            />
-            <label htmlFor="aipolish">
-              Laat AI mijn tekst controleren op spelling en grammatica (verandert de inhoud niet)
-            </label>
-          </div>
 
           {error && <p className="error-text">{error}</p>}
 

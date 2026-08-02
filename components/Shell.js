@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Eye, Send, Lock } from "lucide-react";
+import { Eye, Send, Lock, Archive } from "lucide-react";
 
 const MONTHS = [
   "januari", "februari", "maart", "april", "mei", "juni",
@@ -25,6 +25,9 @@ export default function Shell({ children, active }) {
           </Link>
           <Link href="/submit" className={`nav-btn ${active === "submit" ? "active" : ""}`}>
             <Send size={14} /> Iets insturen
+          </Link>
+          <Link href="/archief" className={`nav-btn ${active === "archief" ? "active" : ""}`}>
+            <Archive size={14} /> Archief
           </Link>
           <Link href="/admin" className={`nav-btn ${active === "admin" ? "active" : ""}`}>
             <Lock size={14} /> Redactie

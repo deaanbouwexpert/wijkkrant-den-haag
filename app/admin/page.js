@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Shell from "../../components/Shell";
 import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
-import { Lock, Clock, Check, Pencil, Trash2 } from "lucide-react";
+import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud } from "lucide-react";
 
 const MONTHS = [
   "januari", "februari", "maart", "april", "mei", "juni",
@@ -24,6 +24,10 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
   const [toast, setToast] = useState("");
+  const [archive, setArchiveList] = useState([]);
+  const [archiveForm, setArchiveForm] = useState({ title: "", year: new Date().getFullYear(), month: 1, lang: "nl" });
+  const [archiveFile, setArchiveFile] = useState(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? sessionStorage.getItem("wk_admin_pw") : null;
@@ -47,6 +51,7 @@ export default function AdminPage() {
       setPosts(data.posts || []);
       setAuthed(true);
       sessionStorage.setItem("wk_admin_pw", password);
+      loadArchive();
     } else {
       setPwErr("Onjuist wachtwoord.");
       sessionStorage.removeItem("wk_admin_pw");
@@ -96,6 +101,60 @@ export default function AdminPage() {
     });
     showToast("Verwijderd uit de wijkkrant.");
     reload();
+  };
+
+  const loadArchive = async () => {
+    const res = await fetch("/api/archive");
+    if (res.ok) {
+      const data = await res.json();
+      setArchiveList(data.archive || []);
+    }
+  };
+
+  const onArchiveFile = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.type !== "application/pdf") {
+      showToast("Alleen PDF-bestanden zijn toegestaan.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setArchiveFile({ name: f.name, dataUrl: reader.result });
+    reader.readAsDataURL(f);
+  };
+
+  const uploadArchive = async (e) => {
+    e.preventDefault();
+    if (!archiveFile) {
+      showToast("Kies eerst een PDF-bestand.");
+      return;
+    }
+    setArchiveBusy(true);
+    const res = await fetch("/api/archive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify({ ...archiveForm, file: archiveFile.dataUrl }),
+    });
+    if (res.ok) {
+      showToast("Oude editie toegevoegd aan het archief.");
+      setArchiveForm({ title: "", year: new Date().getFullYear(), month: 1, lang: "nl" });
+      setArchiveFile(null);
+      loadArchive();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || "Uploaden is niet gelukt.");
+    }
+    setArchiveBusy(false);
+  };
+
+  const deleteArchive = async (id) => {
+    await fetch("/api/archive", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify({ id }),
+    });
+    showToast("Verwijderd uit het archief.");
+    loadArchive();
   };
 
   const startEdit = (p) => {
@@ -231,6 +290,74 @@ export default function AdminPage() {
               </span>
               <button
                 onClick={() => unpublish(p.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
+          <div className="section-title" style={{ marginTop: 32 }}>
+            <BookOpen size={18} /> Archief — oude edities ({archive.length})
+          </div>
+          <form className="admin-post" onSubmit={uploadArchive}>
+            <label className="field-label">Titel</label>
+            <input
+              value={archiveForm.title}
+              onChange={(e) => setArchiveForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="Bijv. Nieuwsbrief wijk Den Haag"
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label className="field-label">Maand</label>
+                <select
+                  value={archiveForm.month}
+                  onChange={(e) => setArchiveForm((f) => ({ ...f, month: Number(e.target.value) }))}
+                >
+                  {MONTHS.map((m, i) => (
+                    <option key={m} value={i + 1}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="field-label">Jaar</label>
+                <input
+                  type="text"
+                  value={archiveForm.year}
+                  onChange={(e) => setArchiveForm((f) => ({ ...f, year: e.target.value }))}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="field-label">Taal</label>
+                <select
+                  value={archiveForm.lang}
+                  onChange={(e) => setArchiveForm((f) => ({ ...f, lang: e.target.value }))}
+                >
+                  <option value="nl">Nederlands</option>
+                  <option value="en">Engels</option>
+                </select>
+              </div>
+            </div>
+            <label className="field-label">PDF-bestand</label>
+            <input type="file" accept="application/pdf" onChange={onArchiveFile} style={{ marginBottom: 16 }} />
+            {archiveFile && <p className="hint" style={{ marginTop: -10 }}>Gekozen: {archiveFile.name}</p>}
+            <button className="btn btn-sm" disabled={archiveBusy}>
+              <UploadCloud size={13} /> {archiveBusy ? "Bezig..." : "Toevoegen aan archief"}
+            </button>
+          </form>
+          {archive.map((a) => (
+            <div className="published-row" key={a.id}>
+              <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <span className="tag" style={{ background: "#b9812f" }}>
+                  {(a.lang || "nl").toUpperCase()}
+                </span>
+                <span style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {MONTHS[a.month - 1]} {a.year} — {a.title}
+                </span>
+              </span>
+              <button
+                onClick={() => deleteArchive(a.id)}
                 style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
               >
                 <Trash2 size={15} />
