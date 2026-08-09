@@ -5,7 +5,7 @@ import { useLang } from "../../components/LangProvider";
 import { CATEGORIES } from "../../lib/categories";
 import { ORGANIZATIONS } from "../../lib/organizations";
 import { t } from "../../lib/i18n";
-import { ImagePlus, X, Send, Check, Sparkles, Loader2, FileText, Paperclip } from "lucide-react";
+import { ImagePlus, X, Send, Check, FileText, Paperclip } from "lucide-react";
 
 const MAX_IMAGES = 6;
 const MAX_PDF_BYTES = 15 * 1024 * 1024; // 15 MB
@@ -40,10 +40,6 @@ export default function SubmitPage() {
   const [lang] = useLang();
   const [form, setForm] = useState({ name: "", category: CATEGORIES[0].id, org: "", title: "", text: "" });
   const [images, setImages] = useState([]);
-  const [variants, setVariants] = useState(null);
-  const [variantsBusy, setVariantsBusy] = useState(false);
-  const [chosenVariant, setChosenVariant] = useState(null);
-  const [wasAiEdited, setWasAiEdited] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
@@ -86,39 +82,6 @@ export default function SubmitPage() {
   const removePdf = () => {
     setPdfFile(null);
     if (pdfRef.current) pdfRef.current.value = "";
-  };
-
-  const generateVariants = async () => {
-    if (!form.text.trim()) {
-      setError(t(lang, "errNeedTextForAi"));
-      return;
-    }
-    setError("");
-    setVariantsBusy(true);
-    try {
-      const res = await fetch("/api/polish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: form.text.trim(), mode: "variants" }),
-      });
-      const data = await res.json();
-      setVariants(data.variants || null);
-      setChosenVariant(null);
-    } catch {
-      setError(t(lang, "errAiFail"));
-    }
-    setVariantsBusy(false);
-  };
-
-  const chooseVariant = (v) => {
-    setForm((f) => ({ ...f, text: v.text }));
-    setChosenVariant(v.id);
-    setWasAiEdited(true);
-  };
-
-  const keepOwnText = () => {
-    setVariants(null);
-    setChosenVariant(null);
   };
 
   const submit = async (e) => {
@@ -170,7 +133,6 @@ export default function SubmitPage() {
           title: form.title,
           text: finalText,
           images: uploadedUrls,
-          polished: wasAiEdited,
           pdfUrl,
           pdfName: pdfFile ? pdfFile.name : "",
         }),
@@ -196,9 +158,6 @@ export default function SubmitPage() {
               setForm({ name: "", category: CATEGORIES[0].id, org: "", title: "", text: "" });
               setImages([]);
               setPdfFile(null);
-              setVariants(null);
-              setChosenVariant(null);
-              setWasAiEdited(false);
             }}
           >
             {t(lang, "submitAnother")}
@@ -251,54 +210,9 @@ export default function SubmitPage() {
           <textarea
             rows={5}
             value={form.text}
-            onChange={(e) => {
-              setForm((f) => ({ ...f, text: e.target.value }));
-              if (variants) {
-                setVariants(null);
-                setChosenVariant(null);
-                setWasAiEdited(false);
-              }
-            }}
+            onChange={(e) => setForm((f) => ({ ...f, text: e.target.value }))}
             placeholder={t(lang, "storyPlaceholder")}
           />
-
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            style={{ marginTop: -8, marginBottom: 18 }}
-            onClick={generateVariants}
-            disabled={variantsBusy}
-          >
-            {variantsBusy ? <Loader2 size={13} className="spin" /> : <Sparkles size={13} />}
-            {variantsBusy ? t(lang, "aiBusy") : t(lang, "aiButton")}
-          </button>
-          <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
-            {t(lang, "aiHint")}
-          </p>
-
-          {variants && (
-            <div className="variant-list">
-              <button
-                type="button"
-                className={`variant-card ${chosenVariant === null ? "variant-chosen" : ""}`}
-                onClick={keepOwnText}
-              >
-                <span className="variant-label">{t(lang, "ownText")}</span>
-                <span className="variant-text">{form.text}</span>
-              </button>
-              {variants.map((v) => (
-                <button
-                  type="button"
-                  key={v.id}
-                  className={`variant-card ${chosenVariant === v.id ? "variant-chosen" : ""}`}
-                  onClick={() => chooseVariant(v)}
-                >
-                  <span className="variant-label">{v.label}</span>
-                  <span className="variant-text">{v.text}</span>
-                </button>
-              ))}
-            </div>
-          )}
 
           <label className="field-label">
             {t(lang, "photos")} ({images.length}/{MAX_IMAGES})
