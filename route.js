@@ -1,610 +1,183 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap");
+"use client";
+import { useEffect, useState } from "react";
+import Shell from "../components/Shell";
+import { useLang } from "../components/LangProvider";
+import { CATEGORIES, catInfo } from "../lib/categories";
+import { orgInfo } from "../lib/organizations";
+import { t, MONTHS } from "../lib/i18n";
+import { Sparkles, X, FileText } from "lucide-react";
 
-* {
-  box-sizing: border-box;
-}
-
-:root {
-  --bg: #f5efe6;
-  --ink: #2f2a24;
-  --brand: #2f4a42;
-  --brand-dark: #1b302a;
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: "Inter", sans-serif;
+function fmtDate(iso, lang) {
+  const d = new Date(iso);
+  return `${d.getDate()} ${MONTHS[lang][d.getMonth()]} ${d.getFullYear()}`;
 }
 
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 24px 14px 60px;
+function PostCard({ post, lang, translating, onImageClick }) {
+  const c = catInfo(post.category, lang);
+  const org = post.org ? orgInfo(post.org, lang) : null;
+  const hasImages = post.images && post.images.length > 0;
+  const isSinglePoster = hasImages && post.images.length === 1;
+  const tr = lang !== "nl" ? post.translations?.[lang] : null;
+  const title = tr?.title || post.title;
+  const text = tr?.text || post.text;
+  return (
+    <article className="card" style={{ background: c.paper }}>
+      {hasImages && (
+        <div
+          className={`card-photos ${isSinglePoster ? "single" : ""}`}
+          style={{ gridTemplateColumns: post.images.length > 1 ? "1fr 1fr" : "1fr" }}
+        >
+          {post.images.map((src, i) => (
+            <img
+              key={i}
+              src={src}
+              alt=""
+              onClick={() => onImageClick(src)}
+              style={{ cursor: "zoom-in" }}
+            />
+          ))}
+        </div>
+      )}
+      <div className={`card-body ${hasImages ? "with-photo" : ""}`}>
+        <div className="card-meta">
+          <span className="tag" style={{ background: c.color }}>
+            {c.label}
+          </span>
+          {org && <span className="org-tag">{org.label}</span>}
+          <span className="card-date">{fmtDate(post.createdAt, lang)}</span>
+        </div>
+        {title && (
+          <h3 className="card-title" style={{ color: c.color }}>
+            {title}
+          </h3>
+        )}
+        {text && <p className="card-text">{text}</p>}
+        {post.pdfUrl && (
+          <a href={post.pdfUrl} target="_blank" rel="noreferrer" className="card-pdf-link">
+            <FileText size={15} /> {post.pdfName || t(lang, "postPdfLabel")}
+          </a>
+        )}
+        {lang !== "nl" && translating && !tr && (
+          <p className="hint" style={{ marginTop: 8 }}>
+            {t(lang, "translating")}
+          </p>
+        )}
+      </div>
+    </article>
+  );
 }
 
-.header {
-  position: relative;
-  overflow: hidden;
-  border-radius: 28px;
-  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
-  margin-bottom: 32px;
-  text-align: center;
-  color: white;
-}
-.header-inner {
-  padding: 40px 20px 28px;
-}
-.header-eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.3em;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 8px;
-}
-.header-title {
-  font-family: "Fraunces", serif;
-  font-style: italic;
-  font-weight: 500;
-  font-size: 44px;
-  margin: 0 0 8px;
-}
-.header-sub {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 15px;
-  max-width: 480px;
-  margin: 0 auto;
-}
+export default function HomePage() {
+  const [lang] = useLang();
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [cat, setCat] = useState("all");
+  const [lightbox, setLightbox] = useState(null);
+  const [translatingIds, setTranslatingIds] = useState({});
 
-.nav {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 16px 18px;
-  flex-wrap: wrap;
-}
-.nav-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: none;
-}
-.nav-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-.nav-btn.active {
-  background: white;
-  color: var(--brand-dark);
-}
+  useEffect(() => {
+    fetch("/api/posts")
+      .then((r) => r.json())
+      .then((d) => {
+        setPosts(d.posts || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 24px;
-}
-.pill {
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: white;
-  color: rgba(0, 0, 0, 0.6);
-  cursor: pointer;
-}
-.pill.active-all {
-  background: var(--ink);
-  color: white;
-  border-color: var(--ink);
-}
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setLightbox(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [lightbox]);
 
-.feed {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 26px;
-}
-@media (min-width: 640px) {
-  .feed {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+  // Zodra Engels gekozen wordt: vertaal (en cache) elk bericht dat nog geen Engelse versie heeft.
+  useEffect(() => {
+    if (lang === "nl") return;
+    posts.forEach((p) => {
+      if (p.translations?.[lang] || translatingIds[p.id]) return;
+      if (!p.title && !p.text) return;
+      setTranslatingIds((prev) => ({ ...prev, [p.id]: true }));
+      fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: p.id, targetLang: lang }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          setPosts((prev) =>
+            prev.map((post) =>
+              post.id === p.id
+                ? { ...post, translations: { ...(post.translations || {}), [lang]: data } }
+                : post
+            )
+          );
+        })
+        .catch(() => {})
+        .finally(() => {
+          setTranslatingIds((prev) => {
+            const next = { ...prev };
+            delete next[p.id];
+            return next;
+          });
+        });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, posts.length]);
 
-.card {
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-.card-photos {
-  display: grid;
-  gap: 2px;
-  position: relative;
-}
-.card-photos img {
-  width: 100%;
-  object-fit: cover;
-  height: 210px;
-}
-.card-photos.single img {
-  height: auto;
-  max-height: 640px;
-  object-fit: contain;
-  background: rgba(0, 0, 0, 0.03);
-}
-.org-tag {
-  display: inline-flex;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.55);
-  background: rgba(0, 0, 0, 0.06);
-  white-space: nowrap;
-}
-.card-body {
-  padding: 24px;
-}
-.card-body.with-photo {
-  padding-top: 32px;
-}
-.tag {
-  display: inline-flex;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: white;
-  white-space: nowrap;
-}
-.card-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-.card-date {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.4);
-}
-.card-title {
-  font-family: "Fraunces", serif;
-  font-weight: 600;
-  font-size: 22px;
-  margin: 0 0 8px;
-}
-.card-text {
-  font-size: 15px;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  color: rgba(47, 42, 36, 0.9);
-}
+  const sorted = [...posts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const usedCats = CATEGORIES.filter((c) => sorted.some((p) => p.category === c.id));
+  const filtered = cat === "all" ? sorted : sorted.filter((p) => p.category === cat);
 
-.empty {
-  text-align: center;
-  padding: 80px 20px;
-  color: rgba(0, 0, 0, 0.5);
-}
-.empty strong {
-  display: block;
-  font-size: 17px;
-  color: var(--ink);
-  margin-bottom: 4px;
-}
+  return (
+    <Shell active="public">
+      {loading ? (
+        <p style={{ textAlign: "center", color: "rgba(0,0,0,0.4)" }}>{t(lang, "loading")}</p>
+      ) : posts.length === 0 ? (
+        <div className="empty">
+          <Sparkles size={26} style={{ marginBottom: 8, color: "#b9812f" }} />
+          <strong>{t(lang, "emptyTitle")}</strong>
+          {t(lang, "emptyBody")}
+        </div>
+      ) : (
+        <>
+          <div className="filters">
+            <button className={`pill ${cat === "all" ? "active-all" : ""}`} onClick={() => setCat("all")}>
+              {t(lang, "all")}
+            </button>
+            {usedCats.map((c) => {
+              const ci = catInfo(c.id, lang);
+              return (
+                <button
+                  key={c.id}
+                  className="pill"
+                  style={cat === c.id ? { background: ci.color, color: "white", borderColor: ci.color } : {}}
+                  onClick={() => setCat(c.id)}
+                >
+                  {ci.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="feed">
+            {filtered.map((p) => (
+              <PostCard key={p.id} post={p} lang={lang} translating={!!translatingIds[p.id]} onImageClick={setLightbox} />
+            ))}
+          </div>
+        </>
+      )}
 
-.panel {
-  background: white;
-  border-radius: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 32px;
-  max-width: 520px;
-  margin: 0 auto;
-}
-.panel h2 {
-  font-family: "Fraunces", serif;
-  font-weight: 600;
-  color: var(--brand);
-  margin: 0 0 4px;
-  font-size: 22px;
-}
-.panel p.sub {
-  color: rgba(0, 0, 0, 0.5);
-  font-size: 14px;
-  margin: 0 0 22px;
-}
-
-label.field-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: rgba(0, 0, 0, 0.5);
-  margin-bottom: 6px;
-}
-input[type="text"],
-input[type="password"],
-select,
-textarea {
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  padding: 10px 14px;
-  font-size: 14px;
-  font-family: inherit;
-  margin-bottom: 16px;
-  background: white;
-}
-textarea {
-  resize: vertical;
-}
-.checkbox-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.65);
-}
-.btn {
-  border: none;
-  cursor: pointer;
-  border-radius: 999px;
-  padding: 12px 20px;
-  font-weight: 600;
-  font-size: 14px;
-  color: white;
-  background: var(--brand);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.btn-full {
-  width: 100%;
-}
-.btn-outline {
-  background: transparent;
-  color: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(0, 0, 0, 0.15);
-}
-.btn-green {
-  background: #516b47;
-}
-.btn-red {
-  background: #a1493f;
-}
-.btn-sm {
-  padding: 7px 14px;
-  font-size: 12px;
-}
-
-.thumb-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.thumb {
-  position: relative;
-  width: 76px;
-  height: 76px;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-}
-.thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.thumb button {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: rgba(0, 0, 0, 0.6);
-  border: none;
-  color: white;
-  border-radius: 999px;
-  padding: 2px;
-  line-height: 0;
-  cursor: pointer;
-}
-.thumb-add {
-  width: 76px;
-  height: 76px;
-  border-radius: 12px;
-  border: 2px dashed rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: rgba(0, 0, 0, 0.4);
-  background: none;
-  cursor: pointer;
-  font-size: 11px;
-  gap: 4px;
-}
-
-.error-text {
-  color: #b3261e;
-  font-size: 13px;
-  margin: -8px 0 12px;
-}
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #2f2a24;
-  color: white;
-  padding: 10px 18px;
-  border-radius: 999px;
-  font-size: 14px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
-  z-index: 50;
-}
-
-.admin-post {
-  background: white;
-  border-radius: 18px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 20px;
-  margin-bottom: 16px;
-}
-.admin-thumbs {
-  display: flex;
-  gap: 8px;
-  margin: 10px 0;
-}
-.admin-thumbs img {
-  width: 76px;
-  height: 76px;
-  border-radius: 10px;
-  object-fit: cover;
-}
-.admin-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-.published-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: white;
-  border-radius: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 10px 16px;
-  margin-bottom: 8px;
-}
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 14px;
-}
-.hint {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.4);
-  margin-top: 10px;
-}
-
-.lightbox {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 24px;
-  cursor: zoom-out;
-}
-.lightbox img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  border-radius: 8px;
-  cursor: default;
-}
-.lightbox-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  color: white;
-  border-radius: 999px;
-  padding: 10px;
-  cursor: pointer;
-  line-height: 0;
-}
-.lightbox-close:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* Extra gezelligheid: lichte kanteling op meerdere foto's, net als in een plakboek */
-.card-photos img:nth-child(odd) {
-  transform: rotate(-0.6deg);
-}
-.card-photos img:nth-child(even) {
-  transform: rotate(0.6deg);
-}
-.card {
-  position: relative;
-}
-.card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 24px;
-  width: 46px;
-  height: 14px;
-  background: rgba(255, 255, 255, 0.55);
-  transform: rotate(-3deg) translateY(-6px);
-  border-radius: 2px;
-  z-index: 2;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-/* AI-suggesties (drie versies) */
-.spin {
-  animation: spin 1s linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.variant-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-.variant-card {
-  text-align: left;
-  border: 2px solid rgba(0, 0, 0, 0.08);
-  background: white;
-  border-radius: 16px;
-  padding: 12px 14px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.variant-card:hover {
-  border-color: rgba(0, 0, 0, 0.2);
-}
-.variant-chosen {
-  border-color: var(--brand);
-  background: #f2f7f0;
-}
-.variant-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--brand);
-  margin-bottom: 4px;
-}
-.variant-text {
-  display: block;
-  font-size: 13px;
-  line-height: 1.5;
-  color: rgba(0, 0, 0, 0.75);
-  white-space: pre-wrap;
-}
-
-/* Archief */
-.archive-year {
-  font-family: "Fraunces", serif;
-  font-weight: 600;
-  font-size: 22px;
-  color: var(--brand);
-  margin: 0 0 12px;
-}
-.archive-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-}
-@media (min-width: 560px) {
-  .archive-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-.archive-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 18px;
-  border-radius: 20px;
-  text-decoration: none;
-  color: var(--ink);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: transform 0.15s ease;
-}
-.archive-card:hover {
-  transform: translateY(-2px);
-}
-.archive-flag {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  background: rgba(255, 255, 255, 0.75);
-  padding: 3px 9px;
-  border-radius: 999px;
-}
-.archive-month {
-  text-transform: capitalize;
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.5);
-}
-.archive-title {
-  font-family: "Fraunces", serif;
-  font-weight: 600;
-  font-size: 18px;
-}
-.archive-download {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--brand);
-  margin-top: 6px;
-}
-
-/* Taal-knop (NL/EN) */
-.lang-toggle {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-.lang-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: white;
-  color: rgba(0, 0, 0, 0.55);
-  cursor: pointer;
-}
-.lang-btn.active {
-  background: var(--brand);
-  color: white;
-  border-color: var(--brand);
+      {lightbox && (
+        <div className="lightbox" onClick={() => setLightbox(null)}>
+          <button className="lightbox-close" onClick={() => setLightbox(null)}>
+            <X size={22} />
+          </button>
+          <img src={lightbox} alt="" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+    </Shell>
+  );
 }

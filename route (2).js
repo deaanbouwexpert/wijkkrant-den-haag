@@ -1,0 +1,650 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #f5efe6;
+  --ink: #2f2a24;
+  --brand: #2f4a42;
+  --brand-dark: #1b302a;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Inter", sans-serif;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 14px 60px;
+}
+
+.header {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  margin-bottom: 32px;
+  text-align: center;
+  color: white;
+}
+.header-inner {
+  padding: 40px 20px 28px;
+}
+.header-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+}
+.header-title {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 44px;
+  margin: 0 0 8px;
+}
+.header-sub {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.nav {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px 18px;
+  flex-wrap: wrap;
+}
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+}
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.nav-btn.active {
+  background: white;
+  color: var(--brand-dark);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.pill {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: white;
+  color: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+.pill.active-all {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+
+.feed {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 26px;
+}
+@media (min-width: 640px) {
+  .feed {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card {
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.card-photos {
+  display: grid;
+  gap: 2px;
+  position: relative;
+}
+.card-photos img {
+  width: 100%;
+  object-fit: cover;
+  height: 210px;
+}
+.card-photos.single img {
+  height: auto;
+  max-height: 640px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.03);
+}
+.org-tag {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.06);
+  white-space: nowrap;
+}
+.card-body {
+  padding: 24px;
+}
+.card-body.with-photo {
+  padding-top: 32px;
+}
+.tag {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: white;
+  white-space: nowrap;
+}
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.card-date {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.4);
+}
+.card-title {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 22px;
+  margin: 0 0 8px;
+}
+.card-text {
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: rgba(47, 42, 36, 0.9);
+}
+
+.empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: rgba(0, 0, 0, 0.5);
+}
+.empty strong {
+  display: block;
+  font-size: 17px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.panel {
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 32px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.panel h2 {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  color: var(--brand);
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+.panel p.sub {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 14px;
+  margin: 0 0 22px;
+}
+
+label.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(0, 0, 0, 0.5);
+  margin-bottom: 6px;
+}
+input[type="text"],
+input[type="password"],
+select,
+textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 16px;
+  background: white;
+}
+textarea {
+  resize: vertical;
+}
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+}
+.btn {
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+  background: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-full {
+  width: 100%;
+}
+.btn-outline {
+  background: transparent;
+  color: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.btn-green {
+  background: #516b47;
+}
+.btn-red {
+  background: #a1493f;
+}
+.btn-sm {
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+.thumb-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.thumb {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.thumb button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: white;
+  border-radius: 999px;
+  padding: 2px;
+  line-height: 0;
+  cursor: pointer;
+}
+.thumb-add {
+  width: 76px;
+  height: 76px;
+  border-radius: 12px;
+  border: 2px dashed rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.4);
+  background: none;
+  cursor: pointer;
+  font-size: 11px;
+  gap: 4px;
+}
+
+.error-text {
+  color: #b3261e;
+  font-size: 13px;
+  margin: -8px 0 12px;
+}
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2f2a24;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  z-index: 50;
+}
+
+.admin-post {
+  background: white;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.admin-thumbs {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+.admin-thumbs img {
+  width: 76px;
+  height: 76px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.published-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 10px 16px;
+  margin-bottom: 8px;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.hint {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.4);
+  margin-top: 10px;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+  cursor: zoom-out;
+}
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: default;
+}
+.lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  border-radius: 999px;
+  padding: 10px;
+  cursor: pointer;
+  line-height: 0;
+}
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Extra gezelligheid: lichte kanteling op meerdere foto's, net als in een plakboek */
+.card-photos img:nth-child(odd) {
+  transform: rotate(-0.6deg);
+}
+.card-photos img:nth-child(even) {
+  transform: rotate(0.6deg);
+}
+.card {
+  position: relative;
+}
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 24px;
+  width: 46px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  transform: rotate(-3deg) translateY(-6px);
+  border-radius: 2px;
+  z-index: 2;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* AI-suggesties (drie versies) */
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.variant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.variant-card {
+  text-align: left;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  background: white;
+  border-radius: 16px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.variant-card:hover {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+.variant-chosen {
+  border-color: var(--brand);
+  background: #f2f7f0;
+}
+.variant-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--brand);
+  margin-bottom: 4px;
+}
+.variant-text {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.75);
+  white-space: pre-wrap;
+}
+
+/* Archief */
+.archive-year {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--brand);
+  margin: 0 0 12px;
+}
+.archive-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 560px) {
+  .archive-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.archive-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px;
+  border-radius: 20px;
+  text-decoration: none;
+  color: var(--ink);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s ease;
+}
+.archive-card:hover {
+  transform: translateY(-2px);
+}
+.archive-flag {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.archive-month {
+  text-transform: capitalize;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.5);
+}
+.archive-title {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 18px;
+}
+.archive-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+  margin-top: 6px;
+}
+
+.card-pdf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+  margin-top: 10px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+  text-decoration: none;
+  width: fit-content;
+}
+.card-pdf-link:hover {
+  background: rgba(0, 0, 0, 0.09);
+}
+
+/* Taal-knop rechtsboven in de header */
+.lang-toggle-corner {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  cursor: pointer;
+}
+.lang-toggle-corner:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Header met eigen foto('s) */
+.header-tall {
+  padding-bottom: 6px;
+}
+.header-collage {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 16px 22px;
+  flex-wrap: wrap;
+}
+.header-collage-img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 3px solid white;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+.header-collage-img:nth-child(odd) {
+  transform: rotate(-3deg);
+}
+.header-collage-img:nth-child(even) {
+  transform: rotate(3deg);
+}
