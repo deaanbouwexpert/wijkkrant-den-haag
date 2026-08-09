@@ -42,6 +42,15 @@ function fmtDate(iso) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+function fmtDateStr(dateStr) {
+  // Voor "YYYY-MM-DD"-strings uit een <input type="date">: handmatig opsplitsen
+  // i.p.v. via new Date(), zodat er nooit een tijdzone-verschuiving kan optreden.
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d) return dateStr;
+  return `${d} ${MONTHS[m - 1]} ${y}`;
+}
+
 export default function AdminPage() {
   const [pw, setPw] = useState("");
   const [authed, setAuthed] = useState(false);
@@ -64,6 +73,12 @@ export default function AdminPage() {
   });
   const [pdfPostFile, setPdfPostFile] = useState(null);
   const [pdfPostBusy, setPdfPostBusy] = useState(false);
+  const [agendaDates, setAgendaDatesList] = useState([]);
+  const [agendaForm, setAgendaForm] = useState({ title: "", when: "", note: "" });
+  const [agendaBusy, setAgendaBusy] = useState(false);
+  const [roster, setRosterList] = useState([]);
+  const [rosterForm, setRosterForm] = useState({ date: "", who: "" });
+  const [rosterBusy, setRosterBusy] = useState(false);
   const [settings, setSettingsLocal, refreshSettings] = useSettings();
   const [settingsBusy, setSettingsBusy] = useState(false);
   const colorSaveTimer = useRef(null);
@@ -91,6 +106,8 @@ export default function AdminPage() {
       setAuthed(true);
       sessionStorage.setItem("wk_admin_pw", password);
       loadArchive();
+      loadAgenda();
+      loadRoster();
     } else {
       setPwErr("Onjuist wachtwoord.");
       sessionStorage.removeItem("wk_admin_pw");
@@ -217,6 +234,86 @@ export default function AdminPage() {
     });
     showToast("Verwijderd uit het archief.");
     loadArchive();
+  };
+
+  const loadAgenda = async () => {
+    const res = await fetch("/api/agenda");
+    if (res.ok) {
+      const data = await res.json();
+      setAgendaDatesList(data.dates || []);
+    }
+  };
+
+  const addAgendaDate = async (e) => {
+    e.preventDefault();
+    if (!agendaForm.title.trim() || !agendaForm.when.trim()) {
+      showToast("Vul een titel en 'wanneer' in.");
+      return;
+    }
+    setAgendaBusy(true);
+    const res = await fetch("/api/agenda", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify(agendaForm),
+    });
+    if (res.ok) {
+      showToast("Toegevoegd aan de belangrijke data.");
+      setAgendaForm({ title: "", when: "", note: "" });
+      loadAgenda();
+    } else {
+      showToast("Toevoegen is niet gelukt.");
+    }
+    setAgendaBusy(false);
+  };
+
+  const deleteAgendaDate = async (id) => {
+    await fetch("/api/agenda", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify({ id }),
+    });
+    showToast("Verwijderd.");
+    loadAgenda();
+  };
+
+  const loadRoster = async () => {
+    const res = await fetch("/api/roster");
+    if (res.ok) {
+      const data = await res.json();
+      setRosterList(data.roster || []);
+    }
+  };
+
+  const addRosterEntry = async (e) => {
+    e.preventDefault();
+    if (!rosterForm.date || !rosterForm.who.trim()) {
+      showToast("Vul een datum en wie in.");
+      return;
+    }
+    setRosterBusy(true);
+    const res = await fetch("/api/roster", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify(rosterForm),
+    });
+    if (res.ok) {
+      showToast("Toegevoegd aan het schoonmaakrooster.");
+      setRosterForm({ date: "", who: "" });
+      loadRoster();
+    } else {
+      showToast("Toevoegen is niet gelukt.");
+    }
+    setRosterBusy(false);
+  };
+
+  const deleteRosterEntry = async (id) => {
+    await fetch("/api/roster", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify({ id }),
+    });
+    showToast("Verwijderd.");
+    loadRoster();
   };
 
   const onPdfPostFile = (e) => {
@@ -399,6 +496,94 @@ export default function AdminPage() {
       ) : (
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <div className="section-title">
+            <Clock size={18} /> Belangrijke data (wijkagenda)
+          </div>
+          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
+            Terugkerende afspraken zoals de potluck of tempelavond. Deze verschijnen boven in de wijkkrant.
+          </p>
+          {agendaDates.length === 0 && <p className="hint">Nog geen data toegevoegd.</p>}
+          {agendaDates.map((d) => (
+            <div className="published-row" key={d.id}>
+              <span style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: 14 }}>{d.title}</strong>
+                <span className="hint" style={{ display: "block" }}>
+                  {d.when}
+                  {d.note ? ` — ${d.note}` : ""}
+                </span>
+              </span>
+              <button
+                onClick={() => deleteAgendaDate(d.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
+          <form className="admin-post" onSubmit={addAgendaDate} style={{ marginTop: 12 }}>
+            <label className="field-label">Titel</label>
+            <input
+              value={agendaForm.title}
+              onChange={(e) => setAgendaForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="Bijv. Potluck eten"
+            />
+            <label className="field-label">Wanneer</label>
+            <input
+              value={agendaForm.when}
+              onChange={(e) => setAgendaForm((f) => ({ ...f, when: e.target.value }))}
+              placeholder="Bijv. Elke 5e zondag van de maand, 12:00"
+            />
+            <label className="field-label">Notitie (optioneel)</label>
+            <input
+              value={agendaForm.note}
+              onChange={(e) => setAgendaForm((f) => ({ ...f, note: e.target.value }))}
+              placeholder="Bijv. Neem iets lekkers mee om te delen"
+              style={{ marginBottom: 16 }}
+            />
+            <button className="btn btn-sm" disabled={agendaBusy}>
+              {agendaBusy ? "Bezig..." : "Toevoegen"}
+            </button>
+          </form>
+
+          <div className="section-title" style={{ marginTop: 32 }}>
+            <Clock size={18} /> Schoonmaakrooster
+          </div>
+          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
+            Wie is welke week ingedeeld. Verschijnt ook boven in de wijkkrant.
+          </p>
+          {roster.length === 0 && <p className="hint">Nog niemand ingedeeld.</p>}
+          {roster.map((r) => (
+            <div className="published-row" key={r.id}>
+              <span style={{ fontSize: 14 }}>
+                {fmtDateStr(r.date)} — <strong>{r.who}</strong>
+              </span>
+              <button
+                onClick={() => deleteRosterEntry(r.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
+          <form className="admin-post" onSubmit={addRosterEntry} style={{ marginTop: 12 }}>
+            <label className="field-label">Datum (van die week)</label>
+            <input
+              type="date"
+              value={rosterForm.date}
+              onChange={(e) => setRosterForm((f) => ({ ...f, date: e.target.value }))}
+            />
+            <label className="field-label">Wie is ingedeeld</label>
+            <input
+              value={rosterForm.who}
+              onChange={(e) => setRosterForm((f) => ({ ...f, who: e.target.value }))}
+              placeholder="Bijv. Familie Jansen"
+              style={{ marginBottom: 16 }}
+            />
+            <button className="btn btn-sm" disabled={rosterBusy}>
+              {rosterBusy ? "Bezig..." : "Toevoegen"}
+            </button>
+          </form>
+
+          <div className="section-title" style={{ marginTop: 32 }}>
             <Clock size={18} /> Wacht op goedkeuring ({pending.length})
           </div>
           {pending.length === 0 && <p className="hint">Niets om te beoordelen — mooi rustig.</p>}

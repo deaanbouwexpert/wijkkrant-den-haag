@@ -646,6 +646,79 @@ textarea {
   white-space: nowrap;
 }
 
+.agenda-banner {
+  max-width: 640px;
+  margin: 0 auto 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.agenda-block {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+.agenda-block-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin: 0 0 12px;
+}
+.agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.agenda-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  font-size: 14px;
+}
+.agenda-item-title {
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.85);
+}
+.agenda-item-when {
+  color: var(--brand);
+  font-weight: 600;
+}
+.agenda-item-note {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 13px;
+  flex-basis: 100%;
+}
+.roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.roster-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+.roster-item:last-child {
+  border-bottom: none;
+}
+.roster-date {
+  color: rgba(0, 0, 0, 0.5);
+}
+.roster-who {
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.85);
+}
+
 /* Taal-knop rechtsboven in de header */
 .lang-toggle-corner {
   position: absolute;
