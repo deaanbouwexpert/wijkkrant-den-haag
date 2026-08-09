@@ -6,6 +6,8 @@ import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
 import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText } from "lucide-react";
 
+const MAX_IMAGES = 6;
+
 function resizeImage(file, maxWidth = 1400, quality = 0.75) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -59,6 +61,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
+  const [editImagesBusy, setEditImagesBusy] = useState(false);
+  const editFileRef = useRef(null);
   const [toast, setToast] = useState("");
   const [archive, setArchiveList] = useState([]);
   const [archiveForm, setArchiveForm] = useState({ title: "", year: new Date().getFullYear(), month: 1, lang: "nl" });
@@ -456,7 +460,31 @@ export default function AdminPage() {
 
   const startEdit = (p) => {
     setEditingId(p.id);
-    setDraft({ ...p, org: p.org || "" });
+    setDraft({ ...p, org: p.org || "", images: p.images || [] });
+  };
+
+  const removeDraftImage = (idx) => {
+    setDraft((d) => ({ ...d, images: d.images.filter((_, i) => i !== idx) }));
+  };
+
+  const addDraftImages = async (files) => {
+    const list = Array.from(files).slice(0, MAX_IMAGES - (draft?.images?.length || 0));
+    if (!list.length) return;
+    setEditImagesBusy(true);
+    try {
+      const resized = await Promise.all(list.map((f) => resizeImage(f)));
+      const up = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: resized }),
+      });
+      const upData = await up.json();
+      const urls = upData.urls || [];
+      setDraft((d) => ({ ...d, images: [...(d.images || []), ...urls] }));
+    } catch {
+      showToast("Foto('s) toevoegen is niet gelukt.");
+    }
+    setEditImagesBusy(false);
   };
 
   const saveEdit = async () => {
@@ -616,6 +644,55 @@ export default function AdminPage() {
                     value={draft.text}
                     onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))}
                   />
+                  <label className="field-label" style={{ marginTop: 4 }}>
+                    Foto's ({(draft.images || []).length}/{MAX_IMAGES})
+                  </label>
+                  <div className="admin-thumbs" style={{ marginBottom: 10 }}>
+                    {(draft.images || []).map((src, i) => (
+                      <div key={i} style={{ position: "relative" }}>
+                        <img src={src} alt="" />
+                        <button
+                          type="button"
+                          onClick={() => removeDraftImage(i)}
+                          style={{
+                            position: "absolute",
+                            top: -6,
+                            right: -6,
+                            background: "rgba(0,0,0,0.65)",
+                            border: "none",
+                            borderRadius: "50%",
+                            width: 20,
+                            height: 20,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <X size={11} color="white" />
+                        </button>
+                      </div>
+                    ))}
+                    {(draft.images || []).length < MAX_IMAGES && (
+                      <button
+                        type="button"
+                        className="thumb-add"
+                        onClick={() => editFileRef.current?.click()}
+                        disabled={editImagesBusy}
+                      >
+                        <ImagePlus size={16} />
+                        {editImagesBusy ? "Bezig..." : "Toevoegen"}
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={editFileRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    onChange={(e) => e.target.files && addDraftImages(e.target.files)}
+                  />
                   <div className="admin-actions">
                     <button className="btn btn-sm" onClick={saveEdit}>
                       Opslaan
@@ -668,24 +745,112 @@ export default function AdminPage() {
             Al geplaatst ({published.length})
           </div>
           {published.length === 0 && <p className="hint">Nog niets geplaatst.</p>}
-          {published.map((p) => (
-            <div className="published-row" key={p.id}>
-              <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <span className="tag" style={{ background: catInfo(p.category).color }}>
-                  {catInfo(p.category).label}
+          {published.map((p) =>
+            editingId === p.id ? (
+              <div className="admin-post" key={p.id}>
+                <input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
+                <select value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}>
+                  {CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <select value={draft.org} onChange={(e) => setDraft((d) => ({ ...d, org: e.target.value }))}>
+                  <option value="">Geen vereniging</option>
+                  {ORGANIZATIONS.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
+                <textarea rows={4} value={draft.text} onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))} />
+                <label className="field-label" style={{ marginTop: 4 }}>
+                  Foto's ({(draft.images || []).length}/{MAX_IMAGES})
+                </label>
+                <div className="admin-thumbs" style={{ marginBottom: 10 }}>
+                  {(draft.images || []).map((src, i) => (
+                    <div key={i} style={{ position: "relative" }}>
+                      <img src={src} alt="" />
+                      <button
+                        type="button"
+                        onClick={() => removeDraftImage(i)}
+                        style={{
+                          position: "absolute",
+                          top: -6,
+                          right: -6,
+                          background: "rgba(0,0,0,0.65)",
+                          border: "none",
+                          borderRadius: "50%",
+                          width: 20,
+                          height: 20,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <X size={11} color="white" />
+                      </button>
+                    </div>
+                  ))}
+                  {(draft.images || []).length < MAX_IMAGES && (
+                    <button
+                      type="button"
+                      className="thumb-add"
+                      onClick={() => editFileRef.current?.click()}
+                      disabled={editImagesBusy}
+                    >
+                      <ImagePlus size={16} />
+                      {editImagesBusy ? "Bezig..." : "Toevoegen"}
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={editFileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  onChange={(e) => e.target.files && addDraftImages(e.target.files)}
+                />
+                <div className="admin-actions">
+                  <button className="btn btn-sm" onClick={saveEdit}>
+                    Opslaan
+                  </button>
+                  <button className="btn btn-sm btn-outline" onClick={() => setEditingId(null)}>
+                    Annuleren
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="published-row" key={p.id}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <span className="tag" style={{ background: catInfo(p.category).color }}>
+                    {catInfo(p.category).label}
+                  </span>
+                  <span style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {p.title || p.text.slice(0, 40)}
+                  </span>
                 </span>
-                <span style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {p.title || p.text.slice(0, 40)}
+                <span style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  <button
+                    onClick={() => startEdit(p)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.35)" }}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => unpublish(p.id)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
+                  >
+                    <Trash2 size={15} />
+                  </button>
                 </span>
-              </span>
-              <button
-                onClick={() => unpublish(p.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
-              >
-                <Trash2 size={15} />
-              </button>
-            </div>
-          ))}
+              </div>
+            )
+          )}
           <div className="section-title" style={{ marginTop: 32 }}>
             <FileText size={18} /> Aankondiging met PDF plaatsen
           </div>
