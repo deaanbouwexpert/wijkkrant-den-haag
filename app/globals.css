@@ -192,6 +192,22 @@ body {
   white-space: pre-wrap;
   color: rgba(47, 42, 36, 0.9);
 }
+.read-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+  cursor: pointer;
+}
+.read-more-btn:hover {
+  text-decoration: underline;
+}
 
 .empty {
   text-align: center;

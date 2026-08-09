@@ -5,7 +5,16 @@ import { useLang } from "../components/LangProvider";
 import { CATEGORIES, catInfo } from "../lib/categories";
 import { orgInfo } from "../lib/organizations";
 import { t, MONTHS } from "../lib/i18n";
-import { Sparkles, X, FileText } from "lucide-react";
+import { Sparkles, X, FileText, ChevronDown, ChevronUp } from "lucide-react";
+
+const TEXT_TRUNCATE_LENGTH = 320;
+
+function truncateText(text, max) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trimEnd() + "…";
+}
 
 function fmtDate(iso, lang) {
   const d = new Date(iso);
@@ -20,6 +29,9 @@ function PostCard({ post, lang, translating, onImageClick }) {
   const tr = lang !== "nl" ? post.translations?.[lang] : null;
   const title = tr?.title || post.title;
   const text = tr?.text || post.text;
+  const [expanded, setExpanded] = useState(false);
+  const isLong = !!text && text.length > TEXT_TRUNCATE_LENGTH;
+  const shownText = isLong && !expanded ? truncateText(text, TEXT_TRUNCATE_LENGTH) : text;
   return (
     <article className="card" style={{ background: c.paper }}>
       {hasImages && (
@@ -51,7 +63,20 @@ function PostCard({ post, lang, translating, onImageClick }) {
             {title}
           </h3>
         )}
-        {text && <p className="card-text">{text}</p>}
+        {text && <p className="card-text">{shownText}</p>}
+        {isLong && (
+          <button type="button" className="read-more-btn" onClick={() => setExpanded((v) => !v)}>
+            {expanded ? (
+              <>
+                <ChevronUp size={14} /> {t(lang, "readLess")}
+              </>
+            ) : (
+              <>
+                <ChevronDown size={14} /> {t(lang, "readMore")}
+              </>
+            )}
+          </button>
+        )}
         {post.pdfUrl && (
           <a href={post.pdfUrl} target="_blank" rel="noreferrer" className="card-pdf-link">
             <FileText size={15} /> {post.pdfName || t(lang, "postPdfLabel")}
