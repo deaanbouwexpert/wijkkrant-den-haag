@@ -43,6 +43,43 @@ export default function Shell({ children, active }) {
       .catch(() => {});
   }, []);
 
+  // Zodra een andere taal dan Nederlands gekozen wordt: vertaal (en cache) elk
+  // agenda-item en elke roosterregel dat nog geen vertaling in die taal heeft.
+  useEffect(() => {
+    if (lang === "nl") return;
+    agendaDates.forEach((d) => {
+      if (d.translations?.[lang]) return;
+      fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "agenda", id: d.id, targetLang: lang }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          setAgendaDates((prev) =>
+            prev.map((x) => (x.id === d.id ? { ...x, translations: { ...(x.translations || {}), [lang]: data } } : x))
+          );
+        })
+        .catch(() => {});
+    });
+    roster.forEach((r) => {
+      if (r.translations?.[lang]) return;
+      fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "roster", id: r.id, targetLang: lang }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setRoster((prev) =>
+            prev.map((x) => (x.id === r.id ? { ...x, translations: { ...(x.translations || {}), [lang]: data } } : x))
+          );
+        })
+        .catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, agendaDates.length, roster.length]);
+
   // Dropdown sluiten als je ergens anders klikt, scrollt, of het venster van grootte verandert
   // (anders klopt de berekende positie niet meer).
   useEffect(() => {
@@ -169,13 +206,17 @@ export default function Shell({ children, active }) {
                   className="nav-dropdown"
                   style={{ position: "fixed", top: agendaPos.top, left: agendaPos.left, transform: "translateX(-50%)" }}
                 >
-                  {agendaDates.map((d) => (
-                    <div className="nav-dropdown-item" key={d.id}>
-                      <span className="agenda-item-title">{d.title}</span>
-                      <span className="agenda-item-when">{d.when}</span>
-                      {d.note && <span className="agenda-item-note">{d.note}</span>}
-                    </div>
-                  ))}
+                  {agendaDates.map((d) => {
+                    const tr = lang !== "nl" ? d.translations?.[lang] : null;
+                    const note = tr?.note ?? d.note;
+                    return (
+                      <div className="nav-dropdown-item" key={d.id}>
+                        <span className="agenda-item-title">{tr?.title || d.title}</span>
+                        <span className="agenda-item-when">{tr?.when || d.when}</span>
+                        {note && <span className="agenda-item-note">{note}</span>}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -195,12 +236,15 @@ export default function Shell({ children, active }) {
                   className="nav-dropdown"
                   style={{ position: "fixed", top: rosterPos.top, left: rosterPos.left, transform: "translateX(-50%)" }}
                 >
-                  {roster.map((r) => (
-                    <div className="nav-dropdown-item nav-dropdown-item-row" key={r.id}>
-                      <span className="roster-date">{fmtDateStrLang(r.date, lang)}</span>
-                      <span className="roster-who">{r.who}</span>
-                    </div>
-                  ))}
+                  {roster.map((r) => {
+                    const tr = lang !== "nl" ? r.translations?.[lang] : null;
+                    return (
+                      <div className="nav-dropdown-item nav-dropdown-item-row" key={r.id}>
+                        <span className="roster-date">{fmtDateStrLang(r.date, lang)}</span>
+                        <span className="roster-who">{tr?.who || r.who}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

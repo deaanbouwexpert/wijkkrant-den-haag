@@ -1,13 +1,26 @@
 import { NextResponse } from "next/server";
-import { getPosts, setPosts } from "../../../lib/kv";
+import {
+  getPosts,
+  setPosts,
+  getAgendaDates,
+  setAgendaDates,
+  getCleaningRoster,
+  setCleaningRoster,
+} from "../../../lib/kv";
 
-async function translateWithClaude(title, text, targetLang) {
-  const targetName = targetLang === "en" ? "Engels" : targetLang === "es" ? "Spaans" : "Nederlands";
+function targetName(targetLang) {
+  return targetLang === "en" ? "Engels" : targetLang === "es" ? "Spaans" : "Nederlands";
+}
+
+// Generieke vertaalfunctie: stuurt een object van tekstvelden naar Claude en krijgt
+// diezelfde velden terug, vertaald. Werkt zowel voor {title, text} van een bericht
+// als voor {title, when, note} van een agenda-item of {who} van een roosterregel.
+async function translateFields(fields, targetLang) {
   const system =
-    `Je bent vertaler voor een kerkelijke wijkkrant. Vertaal de aangeleverde titel en tekst naar het ${targetName}. ` +
-    "Behoud de toon, betekenis en alle namen exact zoals ze zijn (namen van personen, plaatsen en Bijbelse/kerkelijke termen vertaal je niet, of alleen als er een gangbare vertaling bestaat). Verzin niets en voeg niets toe. " +
-    'Antwoord ALLEEN met geldige JSON in dit exacte formaat, zonder uitleg of markdown-opmaak: {"title": "...", "text": "..."}';
-  const userContent = JSON.stringify({ title: title || "", text: text || "" });
+    `Je bent vertaler voor een kerkelijke wijkkrant. Vertaal de waarden in de aangeleverde JSON naar het ${targetName(targetLang)}. ` +
+    "Behoud de toon en betekenis. Namen van personen, plaatsen en Bijbelse/kerkelijke termen vertaal je niet, of alleen als er een gangbare vertaling bestaat. Verzin niets en voeg niets toe. " +
+    "Antwoord ALLEEN met geldige JSON met exact dezelfde keys als de invoer, zonder uitleg of markdown-opmaak.";
+  const userContent = JSON.stringify(fields);
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -18,7 +31,7 @@ async function translateWithClaude(title, text, targetLang) {
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1200,
+      max_tokens: 800,
       system,
       messages: [{ role: "user", content: userContent }],
     }),
@@ -28,44 +41,85 @@ async function translateWithClaude(title, text, targetLang) {
   const cleaned = raw.replace(/^```json\s*|\s*```$/g, "");
   try {
     const parsed = JSON.parse(cleaned);
-    return { title: parsed.title || title, text: parsed.text || text };
+    const result = {};
+    for (const key of Object.keys(fields)) {
+      result[key] = typeof parsed[key] === "string" ? parsed[key] : fields[key];
+    }
+    return result;
   } catch {
-    return { title, text };
+    return fields;
   }
 }
 
 export async function POST(req) {
-  const { id, targetLang } = await req.json();
+  const { id, targetLang, type = "post" } = await req.json();
 
   if (!id || !targetLang || !["nl", "en", "es"].includes(targetLang)) {
     return NextResponse.json({ error: "Ongeldig verzoek." }, { status: 400 });
   }
 
+  if (type === "agenda") {
+    const dates = await getAgendaDates();
+    const entry = dates.find((d) => d.id === id);
+    if (!entry) return NextResponse.json({ error: "Niet gevonden." }, { status: 404 });
+    if (entry.translations?.[targetLang]) return NextResponse.json(entry.translations[targetLang]);
+    const fields = { title: entry.title || "", when: entry.when || "", note: entry.note || "" };
+    if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json(fields);
+    try {
+      const translated = await translateFields(fields, targetLang);
+      const next = dates.map((d) =>
+        d.id === id ? { ...d, translations: { ...(d.translations || {}), [targetLang]: translated } } : d
+      );
+      await setAgendaDates(next);
+      return NextResponse.json(translated);
+    } catch {
+      return NextResponse.json(fields);
+    }
+  }
+
+  if (type === "roster") {
+    const roster = await getCleaningRoster();
+    const entry = roster.find((r) => r.id === id);
+    if (!entry) return NextResponse.json({ error: "Niet gevonden." }, { status: 404 });
+    if (entry.translations?.[targetLang]) return NextResponse.json(entry.translations[targetLang]);
+    const fields = { who: entry.who || "" };
+    if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json(fields);
+    try {
+      const translated = await translateFields(fields, targetLang);
+      const next = roster.map((r) =>
+        r.id === id ? { ...r, translations: { ...(r.translations || {}), [targetLang]: translated } } : r
+      );
+      await setCleaningRoster(next);
+      return NextResponse.json(translated);
+    } catch {
+      return NextResponse.json(fields);
+    }
+  }
+
+  // Standaard: een bericht in de wijkkrant-feed (bestaand gedrag).
   const posts = await getPosts();
   const post = posts.find((p) => p.id === id);
   if (!post) {
     return NextResponse.json({ error: "Bericht niet gevonden." }, { status: 404 });
   }
 
-  // Al vertaald en gecachet? Geef dat meteen terug, geen nieuwe AI-aanroep nodig.
   if (post.translations?.[targetLang]) {
     return NextResponse.json({ title: post.translations[targetLang].title, text: post.translations[targetLang].text });
   }
 
+  const fields = { title: post.title || "", text: post.text || "" };
   if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ title: post.title, text: post.text, note: "AI-vertaling niet ingesteld." });
+    return NextResponse.json({ ...fields, note: "AI-vertaling niet ingesteld." });
   }
 
   try {
-    const translated = await translateWithClaude(post.title, post.text, targetLang);
+    const translated = await translateFields(fields, targetLang);
     const nextPosts = posts.map((p) =>
-      p.id === id
-        ? { ...p, translations: { ...(p.translations || {}), [targetLang]: translated } }
-        : p
+      p.id === id ? { ...p, translations: { ...(p.translations || {}), [targetLang]: translated } } : p
     );
     await setPosts(nextPosts);
     return NextResponse.json(translated);
   } catch (e) {
-    return NextResponse.json({ title: post.title, text: post.text, note: "Vertalen mislukt." });
+    return NextResponse.json({ ...fields, note: "Vertalen mislukt." });
   }
 }
