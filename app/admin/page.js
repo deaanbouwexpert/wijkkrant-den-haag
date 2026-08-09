@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Shell from "../../components/Shell";
 import { useSettings, DEFAULTS } from "../../components/SettingsProvider";
 import { CATEGORIES, catInfo } from "../../lib/categories";
@@ -64,8 +64,9 @@ export default function AdminPage() {
   });
   const [pdfPostFile, setPdfPostFile] = useState(null);
   const [pdfPostBusy, setPdfPostBusy] = useState(false);
-  const [settings, , refreshSettings] = useSettings();
+  const [settings, setSettingsLocal, refreshSettings] = useSettings();
   const [settingsBusy, setSettingsBusy] = useState(false);
+  const colorSaveTimer = useRef(null);
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? sessionStorage.getItem("wk_admin_pw") : null;
@@ -280,21 +281,40 @@ export default function AdminPage() {
     setPdfPostBusy(false);
   };
 
-  const saveSettings = async (updates) => {
-    setSettingsBusy(true);
+  const saveSettings = async (updates, { silent = false } = {}) => {
+    if (!silent) setSettingsBusy(true);
     const res = await fetch("/api/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
       body: JSON.stringify(updates),
     });
     if (res.ok) {
-      showToast("Uiterlijk opgeslagen.");
+      if (!silent) showToast("Uiterlijk opgeslagen.");
       refreshSettings();
-    } else {
+    } else if (!silent) {
       showToast("Opslaan van het uiterlijk is niet gelukt.");
     }
-    setSettingsBusy(false);
+    if (!silent) setSettingsBusy(false);
   };
+
+  // Kleurenkiezers vuren tijdens het slepen heel vaak een "change" af. Als we daarbij
+  // elke keer meteen zouden opslaan, kunnen die verzoeken elkaar overlappen en per
+  // ongeluk andere instellingen (zoals de achtergrondfoto) laten verdwijnen. Daarom
+  // tonen we de nieuwe kleur meteen (voor een vloeiend gevoel), maar wachten we met
+  // echt opslaan tot je 400ms stil bent blijven staan met de kleur.
+  const saveColorDebounced = (key, value) => {
+    setSettingsLocal((prev) => ({ ...prev, [key]: value }));
+    if (colorSaveTimer.current) clearTimeout(colorSaveTimer.current);
+    colorSaveTimer.current = setTimeout(() => {
+      saveSettings({ [key]: value });
+    }, 400);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (colorSaveTimer.current) clearTimeout(colorSaveTimer.current);
+    };
+  }, []);
 
   const addHeaderPhotos = async (files) => {
     const list = Array.from(files).slice(0, 5 - (settings.headerImages?.length || 0));
@@ -659,7 +679,7 @@ export default function AdminPage() {
                 <input
                   type="color"
                   value={settings.pageBackgroundColor || "#f5efe6"}
-                  onChange={(e) => saveSettings({ pageBackgroundColor: e.target.value })}
+                  onChange={(e) => saveColorDebounced("pageBackgroundColor", e.target.value)}
                   style={{ width: 60, height: 36, border: "none", background: "none", cursor: "pointer" }}
                 />
               </div>
@@ -668,7 +688,7 @@ export default function AdminPage() {
                 <input
                   type="color"
                   value={settings.adminBackgroundColor || "#e7edf3"}
-                  onChange={(e) => saveSettings({ adminBackgroundColor: e.target.value })}
+                  onChange={(e) => saveColorDebounced("adminBackgroundColor", e.target.value)}
                   style={{ width: 60, height: 36, border: "none", background: "none", cursor: "pointer" }}
                 />
               </div>
