@@ -1,10 +1,19 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, Send, Lock, Archive, Languages, CalendarDays, ChevronDown } from "lucide-react";
+import { Eye, Send, Lock, Archive, Languages, CalendarDays, ChevronDown, Users } from "lucide-react";
 import { useLang } from "./LangProvider";
 import { useSettings } from "./SettingsProvider";
 import { t, MONTHS } from "../lib/i18n";
+
+function fmtDateStrLang(dateStr, lang) {
+  // "YYYY-MM-DD" handmatig opsplitsen i.p.v. via new Date(), zodat er nooit een
+  // tijdzone-verschuiving kan optreden.
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d) return dateStr;
+  return `${d} ${MONTHS[lang][m - 1]} ${y}`;
+}
 
 export default function Shell({ children, active }) {
   const [lang, setLang] = useLang();
@@ -14,6 +23,10 @@ export default function Shell({ children, active }) {
   const [agendaDates, setAgendaDates] = useState([]);
   const [agendaPos, setAgendaPos] = useState({ top: 0, left: 0 });
   const agendaRef = useRef(null);
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [roster, setRoster] = useState([]);
+  const [rosterPos, setRosterPos] = useState({ top: 0, left: 0 });
+  const rosterRef = useRef(null);
 
   const headerImages = settings.headerImages || [];
   const hasHeaderPhotos = headerImages.length > 0;
@@ -24,15 +37,23 @@ export default function Shell({ children, active }) {
       .then((r) => r.json())
       .then((d) => setAgendaDates(d.dates || []))
       .catch(() => {});
+    fetch("/api/roster")
+      .then((r) => r.json())
+      .then((d) => setRoster(d.roster || []))
+      .catch(() => {});
   }, []);
 
   // Dropdown sluiten als je ergens anders klikt, scrollt, of het venster van grootte verandert
   // (anders klopt de berekende positie niet meer).
   useEffect(() => {
-    if (!agendaOpen) return;
-    const close = () => setAgendaOpen(false);
+    if (!agendaOpen && !rosterOpen) return;
+    const close = () => {
+      setAgendaOpen(false);
+      setRosterOpen(false);
+    };
     const onClick = (e) => {
-      if (agendaRef.current && !agendaRef.current.contains(e.target)) close();
+      if (agendaOpen && agendaRef.current && !agendaRef.current.contains(e.target)) setAgendaOpen(false);
+      if (rosterOpen && rosterRef.current && !rosterRef.current.contains(e.target)) setRosterOpen(false);
     };
     document.addEventListener("mousedown", onClick);
     window.addEventListener("scroll", close, true);
@@ -42,14 +63,24 @@ export default function Shell({ children, active }) {
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("resize", close);
     };
-  }, [agendaOpen]);
+  }, [agendaOpen, rosterOpen]);
 
   const toggleAgenda = () => {
     if (!agendaOpen && agendaRef.current) {
       const rect = agendaRef.current.getBoundingClientRect();
       setAgendaPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
     }
+    setRosterOpen(false);
     setAgendaOpen((v) => !v);
+  };
+
+  const toggleRoster = () => {
+    if (!rosterOpen && rosterRef.current) {
+      const rect = rosterRef.current.getBoundingClientRect();
+      setRosterPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+    }
+    setAgendaOpen(false);
+    setRosterOpen((v) => !v);
   };
 
   useEffect(() => {
@@ -139,6 +170,31 @@ export default function Shell({ children, active }) {
                       <span className="agenda-item-title">{d.title}</span>
                       <span className="agenda-item-when">{d.when}</span>
                       {d.note && <span className="agenda-item-note">{d.note}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {roster.length > 0 && (
+            <div className="nav-dropdown-wrap" ref={rosterRef}>
+              <button
+                type="button"
+                className={`nav-btn ${rosterOpen ? "active" : ""}`}
+                onClick={toggleRoster}
+              >
+                <Users size={14} /> {t(lang, "rosterHeading")}
+                <ChevronDown size={12} style={{ transform: rosterOpen ? "rotate(180deg)" : "none" }} />
+              </button>
+              {rosterOpen && (
+                <div
+                  className="nav-dropdown"
+                  style={{ position: "fixed", top: rosterPos.top, left: rosterPos.left, transform: "translateX(-50%)" }}
+                >
+                  {roster.map((r) => (
+                    <div className="nav-dropdown-item nav-dropdown-item-row" key={r.id}>
+                      <span className="roster-date">{fmtDateStrLang(r.date, lang)}</span>
+                      <span className="roster-who">{r.who}</span>
                     </div>
                   ))}
                 </div>

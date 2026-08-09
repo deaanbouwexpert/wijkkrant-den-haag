@@ -5,15 +5,11 @@ import { useLang } from "../components/LangProvider";
 import { CATEGORIES, catInfo } from "../lib/categories";
 import { orgInfo } from "../lib/organizations";
 import { t, MONTHS } from "../lib/i18n";
-import { Sparkles, X, FileText, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { Sparkles, X, FileText, ChevronDown, ChevronUp } from "lucide-react";
 
-function fmtDateStrLang(dateStr, lang) {
-  // "YYYY-MM-DD" handmatig opsplitsen i.p.v. via new Date(), zodat er nooit een
-  // tijdzone-verschuiving kan optreden.
-  if (!dateStr) return "";
-  const [y, m, d] = dateStr.split("-").map(Number);
-  if (!y || !m || !d) return dateStr;
-  return `${d} ${MONTHS[lang][m - 1]} ${y}`;
+function fmtDate(iso, lang) {
+  const d = new Date(iso);
+  return `${d.getDate()} ${MONTHS[lang][d.getMonth()]} ${d.getFullYear()}`;
 }
 
 const TEXT_TRUNCATE_LENGTH = 320;
@@ -23,11 +19,6 @@ function truncateText(text, max) {
   const cut = text.slice(0, max);
   const lastSpace = cut.lastIndexOf(" ");
   return (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trimEnd() + "…";
-}
-
-function fmtDate(iso, lang) {
-  const d = new Date(iso);
-  return `${d.getDate()} ${MONTHS[lang][d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function PostCard({ post, lang, translating, onImageClick }) {
@@ -108,7 +99,6 @@ export default function HomePage() {
   const [cat, setCat] = useState("all");
   const [lightbox, setLightbox] = useState(null);
   const [translatingIds, setTranslatingIds] = useState({});
-  const [roster, setRoster] = useState([]);
 
   useEffect(() => {
     fetch("/api/posts")
@@ -118,10 +108,6 @@ export default function HomePage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-    fetch("/api/roster")
-      .then((r) => r.json())
-      .then((d) => setRoster(d.roster || []))
-      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -173,23 +159,6 @@ export default function HomePage() {
 
   return (
     <Shell active="public">
-      {roster.length > 0 && (
-        <div className="agenda-banner">
-          <div className="agenda-block">
-            <h3 className="agenda-block-title">
-              <Users size={16} /> {t(lang, "rosterHeading")}
-            </h3>
-            <div className="roster-list">
-              {roster.map((r) => (
-                <div className="roster-item" key={r.id}>
-                  <span className="roster-date">{fmtDateStrLang(r.date, lang)}</span>
-                  <span className="roster-who">{r.who}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
       {loading ? (
         <p style={{ textAlign: "center", color: "rgba(0,0,0,0.4)" }}>{t(lang, "loading")}</p>
       ) : posts.length === 0 ? (
