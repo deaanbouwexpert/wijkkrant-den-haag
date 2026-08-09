@@ -8,6 +8,8 @@ const DEFAULTS = {
   adminBackgroundColor: "#e7edf3",
 };
 
+export { DEFAULTS };
+
 const SettingsContext = createContext([DEFAULTS, () => {}, () => {}]);
 
 export function SettingsProvider({ children }) {
@@ -16,7 +18,9 @@ export function SettingsProvider({ children }) {
   const refresh = () => {
     fetch("/api/settings")
       .then((r) => r.json())
-      .then((d) => d.settings && setSettingsState(d.settings))
+      // Altijd samenvoegen met de standaardwaarden, zodat ontbrekende velden
+      // (bijv. na een reset) nooit "undefined" worden in plaats van de standaardwaarde.
+      .then((d) => d.settings && setSettingsState({ ...DEFAULTS, ...d.settings }))
       .catch(() => {});
   };
 

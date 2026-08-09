@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Shell from "../../components/Shell";
-import { useSettings } from "../../components/SettingsProvider";
+import { useSettings, DEFAULTS } from "../../components/SettingsProvider";
 import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
 import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText } from "lucide-react";
@@ -609,6 +609,20 @@ export default function AdminPage() {
             <Palette size={18} /> Website-uiterlijk
           </div>
           <div className="admin-post">
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline"
+                disabled={settingsBusy}
+                onClick={() => {
+                  if (confirm("Alle uiterlijk-instellingen terugzetten naar de standaard? Dit kan niet ongedaan worden gemaakt.")) {
+                    saveSettings(DEFAULTS);
+                  }
+                }}
+              >
+                <X size={13} /> Terug naar standaard
+              </button>
+            </div>
             <label className="field-label">Foto('s) bovenin (bijv. de tempel, of iets feestelijks)</label>
             <p className="hint" style={{ marginTop: -4 }}>
               1 foto vult de hele header. Vanaf 2 foto's krijgt de header meer ruimte en verschijnen ze als een
