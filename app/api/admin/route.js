@@ -10,6 +10,42 @@ export async function GET(req) {
   return NextResponse.json({ posts });
 }
 
+// De redacteur maakt hier zelf direct een bericht aan (bijv. een programma-overzicht als PDF).
+// Dit gaat, anders dan bij ingestuurde bijdragen, direct de wijkkrant in (status "published").
+export async function POST(req) {
+  if (!(await checkAdminPassword(req))) {
+    return NextResponse.json({ error: "Onjuist wachtwoord." }, { status: 401 });
+  }
+  const body = await req.json();
+  const { category, org, title, text, pdfUrl, pdfName } = body;
+
+  const hasText = text && text.trim();
+  const hasPdf = pdfUrl && pdfUrl.trim();
+
+  if (!hasText && !hasPdf) {
+    return NextResponse.json({ error: "Voeg tekst of een PDF-bestand toe." }, { status: 400 });
+  }
+
+  const posts = await getPosts();
+  const post = {
+    id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name: "Redactie",
+    category: category || "agenda",
+    org: org || "",
+    title: (title || "").trim(),
+    text: (text || "").trim(),
+    images: [],
+    pdfUrl: hasPdf ? pdfUrl.trim() : null,
+    pdfName: (pdfName || "").trim(),
+    status: "published",
+    createdAt: new Date().toISOString(),
+  };
+  posts.push(post);
+  await setPosts(posts);
+
+  return NextResponse.json({ ok: true, id: post.id });
+}
+
 export async function PATCH(req) {
   if (!(await checkAdminPassword(req))) {
     return NextResponse.json({ error: "Onjuist wachtwoord." }, { status: 401 });

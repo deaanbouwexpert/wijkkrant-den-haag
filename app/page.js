@@ -5,7 +5,7 @@ import { useLang } from "../components/LangProvider";
 import { CATEGORIES, catInfo } from "../lib/categories";
 import { orgInfo } from "../lib/organizations";
 import { t, MONTHS } from "../lib/i18n";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, FileText } from "lucide-react";
 
 function fmtDate(iso, lang) {
   const d = new Date(iso);
@@ -52,6 +52,11 @@ function PostCard({ post, lang, translating, onImageClick }) {
           </h3>
         )}
         {text && <p className="card-text">{text}</p>}
+        {post.pdfUrl && (
+          <a href={post.pdfUrl} target="_blank" rel="noreferrer" className="card-pdf-link">
+            <FileText size={15} /> {post.pdfName || t(lang, "postPdfLabel")}
+          </a>
+        )}
         {lang !== "nl" && translating && !tr && (
           <p className="hint" style={{ marginTop: 8 }}>
             {t(lang, "translating")}

@@ -583,6 +583,53 @@ textarea {
   margin-top: 6px;
 }
 
+.card-pdf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+  margin-top: 10px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+  text-decoration: none;
+  width: fit-content;
+}
+.card-pdf-link:hover {
+  background: rgba(0, 0, 0, 0.09);
+}
+
+.pdf-chosen {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+.pdf-chosen-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pdf-chosen button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 /* Taal-knop rechtsboven in de header */
 .lang-toggle-corner {
   position: absolute;

@@ -11,13 +11,14 @@ export async function GET() {
 
 export async function POST(req) {
   const body = await req.json();
-  const { name, category, org, title, text, images, polished } = body;
+  const { name, category, org, title, text, images, polished, pdfUrl, pdfName } = body;
 
   const hasText = text && text.trim();
   const hasImages = Array.isArray(images) && images.length > 0;
+  const hasPdf = pdfUrl && pdfUrl.trim();
 
-  if (!hasText && !hasImages) {
-    return NextResponse.json({ error: "Voeg tekst of een foto toe." }, { status: 400 });
+  if (!hasText && !hasImages && !hasPdf) {
+    return NextResponse.json({ error: "Voeg tekst, een foto of een PDF toe." }, { status: 400 });
   }
 
   const posts = await getPosts();
@@ -30,6 +31,8 @@ export async function POST(req) {
     text: (text || "").trim(),
     aiPolished: !!polished,
     images: Array.isArray(images) ? images : [],
+    pdfUrl: hasPdf ? pdfUrl.trim() : null,
+    pdfName: (pdfName || "").trim(),
     status: "pending",
     createdAt: new Date().toISOString(),
   };

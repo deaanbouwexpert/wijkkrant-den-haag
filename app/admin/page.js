@@ -4,7 +4,7 @@ import Shell from "../../components/Shell";
 import { useSettings } from "../../components/SettingsProvider";
 import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
-import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X } from "lucide-react";
+import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText } from "lucide-react";
 
 function resizeImage(file, maxWidth = 1400, quality = 0.75) {
   return new Promise((resolve, reject) => {
@@ -55,6 +55,15 @@ export default function AdminPage() {
   const [archiveForm, setArchiveForm] = useState({ title: "", year: new Date().getFullYear(), month: 1, lang: "nl" });
   const [archiveFile, setArchiveFile] = useState(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
+  const [pdfPostForm, setPdfPostForm] = useState({
+    category: "agenda",
+    org: "",
+    title: "",
+    text: "",
+    pdfName: "",
+  });
+  const [pdfPostFile, setPdfPostFile] = useState(null);
+  const [pdfPostBusy, setPdfPostBusy] = useState(false);
   const [settings, , refreshSettings] = useSettings();
   const [settingsBusy, setSettingsBusy] = useState(false);
 
@@ -207,6 +216,68 @@ export default function AdminPage() {
     });
     showToast("Verwijderd uit het archief.");
     loadArchive();
+  };
+
+  const onPdfPostFile = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.type !== "application/pdf") {
+      showToast("Alleen PDF-bestanden zijn toegestaan.");
+      return;
+    }
+    setPdfPostFile(f);
+  };
+
+  const submitPdfPost = async (e) => {
+    e.preventDefault();
+    if (!pdfPostFile) {
+      showToast("Kies eerst een PDF-bestand.");
+      return;
+    }
+    if (!pdfPostForm.text.trim()) {
+      showToast("Schrijf er ook een stukje tekst bij.");
+      return;
+    }
+    setPdfPostBusy(true);
+    try {
+      // Stap 1: vraag een directe upload-link aan (bestand gaat hierdoor niet via onze eigen server).
+      const initRes = await fetch("/api/admin/pdf-init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      });
+      if (!initRes.ok) {
+        const d = await initRes.json().catch(() => ({}));
+        throw new Error(d.error || "Kon geen upload-link aanmaken.");
+      }
+      const { signedUrl, publicUrl } = await initRes.json();
+
+      // Stap 2: upload het PDF-bestand rechtstreeks naar de opslag.
+      const putRes = await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/pdf" },
+        body: pdfPostFile,
+      });
+      if (!putRes.ok) throw new Error("Uploaden naar de opslag is niet gelukt.");
+
+      // Stap 3: maak het bericht aan — dit verschijnt direct in de wijkkrant.
+      const confirmRes = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": pw },
+        body: JSON.stringify({ ...pdfPostForm, pdfUrl: publicUrl }),
+      });
+      if (!confirmRes.ok) {
+        const d = await confirmRes.json().catch(() => ({}));
+        throw new Error(d.error || "Plaatsen is niet gelukt.");
+      }
+
+      showToast("Aankondiging met PDF geplaatst in de wijkkrant.");
+      setPdfPostForm({ category: "agenda", org: "", title: "", text: "", pdfName: "" });
+      setPdfPostFile(null);
+      reload();
+    } catch (err) {
+      showToast(err.message || "Plaatsen is niet gelukt.");
+    }
+    setPdfPostBusy(false);
   };
 
   const saveSettings = async (updates) => {
@@ -365,6 +436,11 @@ export default function AdminPage() {
                       ))}
                     </div>
                   )}
+                  {p.pdfUrl && (
+                    <a href={p.pdfUrl} target="_blank" rel="noreferrer" className="card-pdf-link" style={{ marginBottom: 8 }}>
+                      <FileText size={14} /> {p.pdfName || "Bekijk PDF-bijlage"}
+                    </a>
+                  )}
                   {p.title && <p style={{ fontWeight: 600, margin: "8px 0 2px" }}>{p.title}</p>}
                   <p style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{p.text}</p>
                   <div className="admin-actions">
@@ -405,6 +481,61 @@ export default function AdminPage() {
               </button>
             </div>
           ))}
+          <div className="section-title" style={{ marginTop: 32 }}>
+            <FileText size={18} /> Aankondiging met PDF plaatsen
+          </div>
+          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
+            Handig voor programma-overzichten zoals de Firesides-flyer. Dit verschijnt direct in de wijkkrant,
+            zonder tussenstap.
+          </p>
+          <form className="admin-post" onSubmit={submitPdfPost}>
+            <label className="field-label">Categorie</label>
+            <select
+              value={pdfPostForm.category}
+              onChange={(e) => setPdfPostForm((f) => ({ ...f, category: e.target.value }))}
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <label className="field-label">Vereniging (optioneel)</label>
+            <select value={pdfPostForm.org} onChange={(e) => setPdfPostForm((f) => ({ ...f, org: e.target.value }))}>
+              <option value="">Geen vereniging</option>
+              {ORGANIZATIONS.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <label className="field-label">Titel (optioneel)</label>
+            <input
+              value={pdfPostForm.title}
+              onChange={(e) => setPdfPostForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="Bijv. Summer Firesides 2026"
+            />
+            <label className="field-label">Tekst</label>
+            <textarea
+              rows={4}
+              value={pdfPostForm.text}
+              onChange={(e) => setPdfPostForm((f) => ({ ...f, text: e.target.value }))}
+              placeholder="Korte aankondiging — het volledige programma staat in de PDF."
+            />
+            <label className="field-label">Tekst op de PDF-knop (optioneel)</label>
+            <input
+              value={pdfPostForm.pdfName}
+              onChange={(e) => setPdfPostForm((f) => ({ ...f, pdfName: e.target.value }))}
+              placeholder="Bijv. Bekijk het volledige programma"
+            />
+            <label className="field-label">PDF-bestand</label>
+            <input type="file" accept="application/pdf" onChange={onPdfPostFile} style={{ marginBottom: 16 }} />
+            {pdfPostFile && <p className="hint" style={{ marginTop: -10 }}>Gekozen: {pdfPostFile.name}</p>}
+            <button className="btn btn-sm" disabled={pdfPostBusy}>
+              <UploadCloud size={13} /> {pdfPostBusy ? "Bezig..." : "Plaatsen in de wijkkrant"}
+            </button>
+          </form>
+
           <div className="section-title" style={{ marginTop: 32 }}>
             <BookOpen size={18} /> Archief — oude edities ({archive.length})
           </div>

@@ -5,9 +5,10 @@ import { useLang } from "../../components/LangProvider";
 import { CATEGORIES } from "../../lib/categories";
 import { ORGANIZATIONS } from "../../lib/organizations";
 import { t } from "../../lib/i18n";
-import { ImagePlus, X, Send, Check, Sparkles, Loader2 } from "lucide-react";
+import { ImagePlus, X, Send, Check, Sparkles, Loader2, FileText, Paperclip } from "lucide-react";
 
 const MAX_IMAGES = 6;
+const MAX_PDF_BYTES = 15 * 1024 * 1024; // 15 MB
 
 function resizeImage(file, maxWidth = 900, quality = 0.72) {
   return new Promise((resolve, reject) => {
@@ -46,7 +47,9 @@ export default function SubmitPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [pdfFile, setPdfFile] = useState(null);
   const fileRef = useRef(null);
+  const pdfRef = useRef(null);
 
   const addFiles = async (files) => {
     setError("");
@@ -64,6 +67,26 @@ export default function SubmitPage() {
   };
 
   const removeImage = (i) => setImages((prev) => prev.filter((_, idx) => idx !== i));
+
+  const onPdfChosen = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setError("");
+    if (f.type !== "application/pdf") {
+      setError(t(lang, "errPdfType"));
+      return;
+    }
+    if (f.size > MAX_PDF_BYTES) {
+      setError(t(lang, "errPdfSize"));
+      return;
+    }
+    setPdfFile(f);
+  };
+
+  const removePdf = () => {
+    setPdfFile(null);
+    if (pdfRef.current) pdfRef.current.value = "";
+  };
 
   const generateVariants = async () => {
     if (!form.text.trim()) {
@@ -101,7 +124,7 @@ export default function SubmitPage() {
   const submit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.text.trim() && images.length === 0) {
+    if (!form.text.trim() && images.length === 0 && !pdfFile) {
       setError(t(lang, "errNeedContent"));
       return;
     }
@@ -118,6 +141,23 @@ export default function SubmitPage() {
         uploadedUrls = upData.urls || [];
       }
 
+      let pdfUrl = "";
+      if (pdfFile) {
+        // Directe upload naar de opslag (via een tijdelijke link), zodat grote PDF's
+        // niet vastlopen op de bodylimiet van een Vercel-functie.
+        const initRes = await fetch("/api/upload-pdf/init", { method: "POST" });
+        if (!initRes.ok) throw new Error("pdf-init-failed");
+        const { signedUrl, publicUrl } = await initRes.json();
+
+        const putRes = await fetch(signedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": "application/pdf" },
+          body: pdfFile,
+        });
+        if (!putRes.ok) throw new Error("pdf-upload-failed");
+        pdfUrl = publicUrl;
+      }
+
       const finalText = form.text.trim();
 
       await fetch("/api/posts", {
@@ -131,6 +171,8 @@ export default function SubmitPage() {
           text: finalText,
           images: uploadedUrls,
           polished: wasAiEdited,
+          pdfUrl,
+          pdfName: pdfFile ? pdfFile.name : "",
         }),
       });
       setDone(true);
@@ -153,6 +195,7 @@ export default function SubmitPage() {
               setDone(false);
               setForm({ name: "", category: CATEGORIES[0].id, org: "", title: "", text: "" });
               setImages([]);
+              setPdfFile(null);
               setVariants(null);
               setChosenVariant(null);
               setWasAiEdited(false);
@@ -284,6 +327,26 @@ export default function SubmitPage() {
             hidden
             onChange={(e) => e.target.files && addFiles(e.target.files)}
           />
+
+          <label className="field-label">{t(lang, "pdfField")}</label>
+          <p className="hint" style={{ marginTop: -10, marginBottom: 12 }}>
+            {t(lang, "pdfHint")}
+          </p>
+          {pdfFile ? (
+            <div className="pdf-chosen">
+              <FileText size={16} />
+              <span className="pdf-chosen-name">{pdfFile.name}</span>
+              <button type="button" onClick={removePdf}>
+                <X size={12} /> {t(lang, "removePdf")}
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="thumb-add" onClick={() => pdfRef.current?.click()}>
+              <Paperclip size={16} />
+              {t(lang, "addPdf")}
+            </button>
+          )}
+          <input ref={pdfRef} type="file" accept="application/pdf" hidden onChange={onPdfChosen} />
 
           {error && <p className="error-text">{error}</p>}
 
