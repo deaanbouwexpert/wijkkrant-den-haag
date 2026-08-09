@@ -1,7 +1,7 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, Send, Lock, Archive, Languages } from "lucide-react";
+import { Eye, Send, Lock, Archive, Languages, CalendarDays, ChevronDown } from "lucide-react";
 import { useLang } from "./LangProvider";
 import { useSettings } from "./SettingsProvider";
 import { t, MONTHS } from "../lib/i18n";
@@ -10,10 +10,30 @@ export default function Shell({ children, active }) {
   const [lang, setLang] = useLang();
   const [settings] = useSettings();
   const now = new Date();
+  const [agendaOpen, setAgendaOpen] = useState(false);
+  const [agendaDates, setAgendaDates] = useState([]);
+  const agendaRef = useRef(null);
 
   const headerImages = settings.headerImages || [];
   const hasHeaderPhotos = headerImages.length > 0;
   const isCollage = headerImages.length > 1;
+
+  useEffect(() => {
+    fetch("/api/agenda")
+      .then((r) => r.json())
+      .then((d) => setAgendaDates(d.dates || []))
+      .catch(() => {});
+  }, []);
+
+  // Dropdown sluiten als je ergens anders klikt.
+  useEffect(() => {
+    if (!agendaOpen) return;
+    const onClick = (e) => {
+      if (agendaRef.current && !agendaRef.current.contains(e.target)) setAgendaOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [agendaOpen]);
 
   useEffect(() => {
     const bg = active === "admin" ? settings.adminBackgroundColor : settings.pageBackgroundColor;
@@ -82,6 +102,29 @@ export default function Shell({ children, active }) {
           <Link href="/archief" className={`nav-btn ${active === "archief" ? "active" : ""}`}>
             <Archive size={14} /> {t(lang, "navArchive")}
           </Link>
+          {agendaDates.length > 0 && (
+            <div className="nav-dropdown-wrap" ref={agendaRef}>
+              <button
+                type="button"
+                className={`nav-btn ${agendaOpen ? "active" : ""}`}
+                onClick={() => setAgendaOpen((v) => !v)}
+              >
+                <CalendarDays size={14} /> {t(lang, "agendaHeading")}
+                <ChevronDown size={12} style={{ transform: agendaOpen ? "rotate(180deg)" : "none" }} />
+              </button>
+              {agendaOpen && (
+                <div className="nav-dropdown">
+                  {agendaDates.map((d) => (
+                    <div className="nav-dropdown-item" key={d.id}>
+                      <span className="agenda-item-title">{d.title}</span>
+                      <span className="agenda-item-when">{d.when}</span>
+                      {d.note && <span className="agenda-item-note">{d.note}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <Link href="/admin" className={`nav-btn ${active === "admin" ? "active" : ""}`}>
             <Lock size={14} /> {t(lang, "navAdmin")}
           </Link>
