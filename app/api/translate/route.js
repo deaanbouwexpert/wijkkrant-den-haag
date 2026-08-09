@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getPosts, setPosts } from "../../../lib/kv";
 
 async function translateWithClaude(title, text, targetLang) {
-  const targetName = targetLang === "en" ? "Engels" : "Nederlands";
+  const targetName = targetLang === "en" ? "Engels" : targetLang === "es" ? "Spaans" : "Nederlands";
   const system =
     `Je bent vertaler voor een kerkelijke wijkkrant. Vertaal de aangeleverde titel en tekst naar het ${targetName}. ` +
     "Behoud de toon, betekenis en alle namen exact zoals ze zijn (namen van personen, plaatsen en Bijbelse/kerkelijke termen vertaal je niet, of alleen als er een gangbare vertaling bestaat). Verzin niets en voeg niets toe. " +
@@ -37,7 +37,7 @@ async function translateWithClaude(title, text, targetLang) {
 export async function POST(req) {
   const { id, targetLang } = await req.json();
 
-  if (!id || !targetLang || !["nl", "en"].includes(targetLang)) {
+  if (!id || !targetLang || !["nl", "en", "es"].includes(targetLang)) {
     return NextResponse.json({ error: "Ongeldig verzoek." }, { status: 400 });
   }
 

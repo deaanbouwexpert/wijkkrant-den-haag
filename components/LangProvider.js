@@ -8,7 +8,7 @@ export function LangProvider({ children }) {
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem("wk_lang") : null;
-    if (stored === "en" || stored === "nl") setLangState(stored);
+    if (stored === "en" || stored === "nl" || stored === "es") setLangState(stored);
   }, []);
 
   const setLang = (l) => {

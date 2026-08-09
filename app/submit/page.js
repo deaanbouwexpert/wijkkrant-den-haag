@@ -183,7 +183,7 @@ export default function SubmitPage() {
           <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
             {CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>
-                {lang === "en" ? c.labelEn : c.label}
+                {lang === "en" ? c.labelEn : lang === "es" ? c.labelEs : c.label}
               </option>
             ))}
           </select>
@@ -193,7 +193,7 @@ export default function SubmitPage() {
             <option value="">{t(lang, "orgNone")}</option>
             {ORGANIZATIONS.map((o) => (
               <option key={o.id} value={o.id}>
-                {lang === "en" ? o.labelEn : o.label}
+                {lang === "en" ? o.labelEn : lang === "es" ? o.labelEs : o.label}
               </option>
             ))}
           </select>

@@ -776,26 +776,35 @@ textarea {
   color: rgba(0, 0, 0, 0.85);
 }
 
-/* Taal-knop rechtsboven in de header */
-.lang-toggle-corner {
+/* Taal-keuze rechtsboven in de header */
+.lang-select-corner {
   position: absolute;
   top: 16px;
   right: 16px;
   z-index: 3;
   display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 12px;
+  gap: 3px;
+  padding: 3px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.12);
-  color: white;
+}
+.lang-opt {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
   cursor: pointer;
 }
-.lang-toggle-corner:hover {
-  background: rgba(255, 255, 255, 0.22);
+.lang-opt:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+.lang-opt.active {
+  background: white;
+  color: var(--brand-dark);
 }
 
 /* Header met eigen foto('s) */

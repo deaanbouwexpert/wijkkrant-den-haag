@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, Send, Lock, Archive, Languages, CalendarDays, ChevronDown, Users } from "lucide-react";
+import { Eye, Send, Lock, Archive, CalendarDays, ChevronDown, Users } from "lucide-react";
 import { useLang } from "./LangProvider";
 import { useSettings } from "./SettingsProvider";
 import { t, MONTHS } from "../lib/i18n";
@@ -116,14 +116,18 @@ export default function Shell({ children, active }) {
             : {}
         }
       >
-        <button
-          className="lang-toggle-corner"
-          onClick={() => setLang(lang === "nl" ? "en" : "nl")}
-          title={lang === "nl" ? "Switch to English" : "Overschakelen naar Nederlands"}
-        >
-          <Languages size={13} />
-          {lang === "nl" ? "EN" : "NL"}
-        </button>
+        <div className="lang-select-corner">
+          {["nl", "en", "es"].map((l) => (
+            <button
+              key={l}
+              type="button"
+              className={`lang-opt ${lang === l ? "active" : ""}`}
+              onClick={() => setLang(l)}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
         <div className="header-inner">
           <p className="header-eyebrow">
             {MONTHS[lang][now.getMonth()]} {now.getFullYear()}
