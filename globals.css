@@ -436,6 +436,11 @@ export default function AdminPage() {
                       ))}
                     </div>
                   )}
+                  {p.pdfUrl && (
+                    <a href={p.pdfUrl} target="_blank" rel="noreferrer" className="card-pdf-link" style={{ marginBottom: 8 }}>
+                      <FileText size={14} /> {p.pdfName || "Bekijk PDF-bijlage"}
+                    </a>
+                  )}
                   {p.title && <p style={{ fontWeight: 600, margin: "8px 0 2px" }}>{p.title}</p>}
                   <p style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{p.text}</p>
                   <div className="admin-actions">
