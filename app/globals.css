@@ -167,13 +167,12 @@ body {
 }
 
 .feed {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 26px;
+  columns: 1;
+  column-gap: 26px;
 }
 @media (min-width: 640px) {
   .feed {
-    grid-template-columns: 1fr 1fr;
+    columns: 2;
   }
 }
 
@@ -182,6 +181,10 @@ body {
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.05);
+  break-inside: avoid;
+  margin-bottom: 26px;
+  display: inline-block;
+  width: 100%;
 }
 .card-photos {
   display: grid;
