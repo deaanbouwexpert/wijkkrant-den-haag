@@ -838,12 +838,18 @@ textarea {
   color: rgba(0, 0, 0, 0.85);
 }
 
-/* Taal-keuze rechtsboven in de header */
-.lang-select-corner {
+/* Taal-keuze rechtsboven in de header, met de wijkagenda-link er klein onder */
+.lang-select-corner-wrap {
   position: absolute;
   top: 16px;
   right: 16px;
   z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.lang-select-corner {
   display: inline-flex;
   gap: 3px;
   padding: 3px;
@@ -867,6 +873,19 @@ textarea {
 .lang-opt.active {
   background: white;
   color: var(--brand-dark);
+}
+.ward-calendar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  padding: 2px 4px;
+}
+.ward-calendar-link:hover {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* Header met eigen foto('s) */

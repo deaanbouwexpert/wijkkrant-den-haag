@@ -192,17 +192,27 @@ export default function Shell({ children, active }) {
             : {}
         }
       >
-        <div className="lang-select-corner">
-          {["nl", "en", "es"].map((l) => (
-            <button
-              key={l}
-              type="button"
-              className={`lang-opt ${lang === l ? "active" : ""}`}
-              onClick={() => setLang(l)}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
+        <div className="lang-select-corner-wrap">
+          <div className="lang-select-corner">
+            {["nl", "en", "es"].map((l) => (
+              <button
+                key={l}
+                type="button"
+                className={`lang-opt ${lang === l ? "active" : ""}`}
+                onClick={() => setLang(l)}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <a
+            href="https://www.churchofjesuschrist.org/calendar/month?lang=eng"
+            target="_blank"
+            rel="noreferrer"
+            className="ward-calendar-link"
+          >
+            <CalendarRange size={11} /> {t(lang, "navWardCalendar")}
+          </a>
         </div>
         <div className="header-inner">
           <p className="header-eyebrow">
@@ -230,14 +240,6 @@ export default function Shell({ children, active }) {
           <Link href="/archief" className={`nav-btn ${active === "archief" ? "active" : ""}`}>
             <Archive size={14} /> {t(lang, "navArchive")}
           </Link>
-          <a
-            href="https://www.churchofjesuschrist.org/calendar/month?lang=eng"
-            target="_blank"
-            rel="noreferrer"
-            className="nav-btn"
-          >
-            <CalendarRange size={14} /> {t(lang, "navWardCalendar")}
-          </a>
           {agendaDates.length > 0 && (
             <div className="nav-dropdown-wrap" ref={agendaRef}>
               <button
