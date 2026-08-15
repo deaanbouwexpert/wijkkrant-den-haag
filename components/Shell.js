@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, Send, Lock, Archive, CalendarDays, ChevronDown, Users } from "lucide-react";
+import { Eye, Send, Lock, Archive, CalendarDays, ChevronDown, Users, MessageSquarePlus, X, Check } from "lucide-react";
 import { useLang } from "./LangProvider";
 import { useSettings } from "./SettingsProvider";
 import { t, MONTHS } from "../lib/i18n";
@@ -27,6 +27,12 @@ export default function Shell({ children, active }) {
   const [roster, setRoster] = useState([]);
   const [rosterPos, setRosterPos] = useState({ top: 0, left: 0 });
   const rosterRef = useRef(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackName, setFeedbackName] = useState("");
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const feedbackRef = useRef(null);
 
   const headerImages = settings.headerImages || [];
   const hasHeaderPhotos = headerImages.length > 0;
@@ -101,6 +107,39 @@ export default function Shell({ children, active }) {
       window.removeEventListener("resize", close);
     };
   }, [agendaOpen, rosterOpen]);
+
+  // Het feedback-paneeltje sluiten als je ernaast klikt.
+  useEffect(() => {
+    if (!feedbackOpen) return;
+    const onClick = (e) => {
+      if (feedbackRef.current && !feedbackRef.current.contains(e.target)) setFeedbackOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [feedbackOpen]);
+
+  const submitFeedback = async (e) => {
+    e.preventDefault();
+    if (!feedbackText.trim()) return;
+    setFeedbackBusy(true);
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: feedbackName, text: feedbackText }),
+      });
+      setFeedbackSent(true);
+      setFeedbackText("");
+      setFeedbackName("");
+      setTimeout(() => {
+        setFeedbackOpen(false);
+        setFeedbackSent(false);
+      }, 2200);
+    } catch {
+      // stil laten mislukken; het knopje blijft gewoon staan zodat iemand het nog een keer kan proberen
+    }
+    setFeedbackBusy(false);
+  };
 
   const toggleAgenda = () => {
     if (!agendaOpen && agendaRef.current) {
@@ -255,6 +294,47 @@ export default function Shell({ children, active }) {
         </div>
       </div>
       {children}
+
+      {active !== "admin" && (
+        <div className="feedback-fab-wrap" ref={feedbackRef}>
+          {feedbackOpen && (
+            <div className="feedback-panel">
+              {feedbackSent ? (
+                <p className="feedback-thanks">
+                  <Check size={16} /> {t(lang, "feedbackThanks")}
+                </p>
+              ) : (
+                <form onSubmit={submitFeedback}>
+                  <p className="feedback-title">{t(lang, "feedbackTitle")}</p>
+                  <textarea
+                    rows={3}
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder={t(lang, "feedbackPlaceholder")}
+                    autoFocus
+                  />
+                  <input
+                    value={feedbackName}
+                    onChange={(e) => setFeedbackName(e.target.value)}
+                    placeholder={t(lang, "feedbackNamePlaceholder")}
+                  />
+                  <button className="btn btn-sm btn-full" disabled={feedbackBusy}>
+                    {feedbackBusy ? t(lang, "loading") : t(lang, "feedbackSend")}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+          <button
+            type="button"
+            className="feedback-fab"
+            onClick={() => setFeedbackOpen((v) => !v)}
+            title={t(lang, "feedbackTitle")}
+          >
+            {feedbackOpen ? <X size={20} /> : <MessageSquarePlus size={20} />}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

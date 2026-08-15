@@ -4,7 +4,7 @@ import Shell from "../../components/Shell";
 import { useSettings, DEFAULTS } from "../../components/SettingsProvider";
 import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
-import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText } from "lucide-react";
+import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText, MessageSquarePlus } from "lucide-react";
 
 const MAX_IMAGES = 6;
 
@@ -83,6 +83,7 @@ export default function AdminPage() {
   const [roster, setRosterList] = useState([]);
   const [rosterForm, setRosterForm] = useState({ date: "", who: "" });
   const [rosterBusy, setRosterBusy] = useState(false);
+  const [feedback, setFeedbackList] = useState([]);
   const [settings, setSettingsLocal, refreshSettings] = useSettings();
   const [settingsBusy, setSettingsBusy] = useState(false);
   const colorSaveTimer = useRef(null);
@@ -112,6 +113,7 @@ export default function AdminPage() {
       loadArchive();
       loadAgenda();
       loadRoster();
+      loadFeedback();
     } else {
       setPwErr("Onjuist wachtwoord.");
       sessionStorage.removeItem("wk_admin_pw");
@@ -318,6 +320,24 @@ export default function AdminPage() {
     });
     showToast("Verwijderd.");
     loadRoster();
+  };
+
+  const loadFeedback = async () => {
+    const res = await fetch("/api/feedback", { headers: { "x-admin-password": pw } });
+    if (res.ok) {
+      const data = await res.json();
+      setFeedbackList(data.feedback || []);
+    }
+  };
+
+  const deleteFeedback = async (id) => {
+    await fetch("/api/feedback", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify({ id }),
+    });
+    showToast("Verwijderd.");
+    loadFeedback();
   };
 
   const onPdfPostFile = (e) => {
@@ -610,6 +630,32 @@ export default function AdminPage() {
               {rosterBusy ? "Bezig..." : "Toevoegen"}
             </button>
           </form>
+
+          <div className="section-title" style={{ marginTop: 32 }}>
+            <MessageSquarePlus size={18} /> Verbeterpunten van leden ({feedback.length})
+          </div>
+          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
+            Dit komt binnen via het zwevende knopje rechtsonder op de wijkkrant. Vink af (verwijder) zodra je 'm hebt
+            verwerkt.
+          </p>
+          {feedback.length === 0 && <p className="hint">Nog geen verbeterpunten binnengekomen.</p>}
+          {feedback.map((f) => (
+            <div className="published-row" key={f.id} style={{ alignItems: "flex-start" }}>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ fontSize: 14, display: "block" }}>{f.text}</span>
+                <span className="hint" style={{ display: "block" }}>
+                  {f.name || "Anoniem"} • {fmtDate(f.createdAt)}
+                </span>
+              </span>
+              <button
+                onClick={() => deleteFeedback(f.id)}
+                title="Afvinken / verwijderen"
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)", flexShrink: 0 }}
+              >
+                <Check size={16} />
+              </button>
+            </div>
+          ))}
 
           <div className="section-title" style={{ marginTop: 32 }}>
             <Clock size={18} /> Wacht op goedkeuring ({pending.length})
