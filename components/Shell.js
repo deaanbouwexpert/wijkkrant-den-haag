@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, Send, Lock, Archive, CalendarDays, ChevronDown, Users, MessageSquarePlus, X, Check } from "lucide-react";
+import { Eye, Send, Lock, Archive, CalendarDays, ChevronDown, Users, MessageSquarePlus, X, Check, CalendarRange } from "lucide-react";
 import { useLang } from "./LangProvider";
 import { useSettings } from "./SettingsProvider";
 import { t, MONTHS } from "../lib/i18n";
@@ -230,6 +230,14 @@ export default function Shell({ children, active }) {
           <Link href="/archief" className={`nav-btn ${active === "archief" ? "active" : ""}`}>
             <Archive size={14} /> {t(lang, "navArchive")}
           </Link>
+          <a
+            href="https://www.churchofjesuschrist.org/calendar/month?lang=eng"
+            target="_blank"
+            rel="noreferrer"
+            className="nav-btn"
+          >
+            <CalendarRange size={14} /> {t(lang, "navWardCalendar")}
+          </a>
           {agendaDates.length > 0 && (
             <div className="nav-dropdown-wrap" ref={agendaRef}>
               <button

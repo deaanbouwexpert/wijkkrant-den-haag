@@ -544,120 +544,6 @@ export default function AdminPage() {
       ) : (
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <div className="section-title">
-            <Clock size={18} /> Belangrijke data (wijkagenda)
-          </div>
-          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Terugkerende afspraken zoals de potluck of tempelavond. Deze verschijnen boven in de wijkkrant.
-          </p>
-          {agendaDates.length === 0 && <p className="hint">Nog geen data toegevoegd.</p>}
-          {agendaDates.map((d) => (
-            <div className="published-row" key={d.id}>
-              <span style={{ minWidth: 0 }}>
-                <strong style={{ fontSize: 14 }}>{d.title}</strong>
-                <span className="hint" style={{ display: "block" }}>
-                  {d.when}
-                  {d.note ? ` — ${d.note}` : ""}
-                </span>
-              </span>
-              <button
-                onClick={() => deleteAgendaDate(d.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
-              >
-                <Trash2 size={15} />
-              </button>
-            </div>
-          ))}
-          <form className="admin-post" onSubmit={addAgendaDate} style={{ marginTop: 12 }}>
-            <label className="field-label">Titel</label>
-            <input
-              value={agendaForm.title}
-              onChange={(e) => setAgendaForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="Bijv. Potluck eten"
-            />
-            <label className="field-label">Wanneer</label>
-            <input
-              value={agendaForm.when}
-              onChange={(e) => setAgendaForm((f) => ({ ...f, when: e.target.value }))}
-              placeholder="Bijv. Elke 5e zondag van de maand, 12:00"
-            />
-            <label className="field-label">Notitie (optioneel)</label>
-            <input
-              value={agendaForm.note}
-              onChange={(e) => setAgendaForm((f) => ({ ...f, note: e.target.value }))}
-              placeholder="Bijv. Neem iets lekkers mee om te delen"
-              style={{ marginBottom: 16 }}
-            />
-            <button className="btn btn-sm" disabled={agendaBusy}>
-              {agendaBusy ? "Bezig..." : "Toevoegen"}
-            </button>
-          </form>
-
-          <div className="section-title" style={{ marginTop: 32 }}>
-            <Clock size={18} /> Schoonmaakrooster
-          </div>
-          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Wie is welke week ingedeeld. Verschijnt ook boven in de wijkkrant.
-          </p>
-          {roster.length === 0 && <p className="hint">Nog niemand ingedeeld.</p>}
-          {roster.map((r) => (
-            <div className="published-row" key={r.id}>
-              <span style={{ fontSize: 14 }}>
-                {fmtDateStr(r.date)} — <strong>{r.who}</strong>
-              </span>
-              <button
-                onClick={() => deleteRosterEntry(r.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
-              >
-                <Trash2 size={15} />
-              </button>
-            </div>
-          ))}
-          <form className="admin-post" onSubmit={addRosterEntry} style={{ marginTop: 12 }}>
-            <label className="field-label">Datum (van die week)</label>
-            <input
-              type="date"
-              value={rosterForm.date}
-              onChange={(e) => setRosterForm((f) => ({ ...f, date: e.target.value }))}
-            />
-            <label className="field-label">Wie is ingedeeld</label>
-            <input
-              value={rosterForm.who}
-              onChange={(e) => setRosterForm((f) => ({ ...f, who: e.target.value }))}
-              placeholder="Bijv. Familie Jansen"
-              style={{ marginBottom: 16 }}
-            />
-            <button className="btn btn-sm" disabled={rosterBusy}>
-              {rosterBusy ? "Bezig..." : "Toevoegen"}
-            </button>
-          </form>
-
-          <div className="section-title" style={{ marginTop: 32 }}>
-            <MessageSquarePlus size={18} /> Verbeterpunten van leden ({feedback.length})
-          </div>
-          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Dit komt binnen via het zwevende knopje rechtsonder op de wijkkrant. Vink af (verwijder) zodra je 'm hebt
-            verwerkt.
-          </p>
-          {feedback.length === 0 && <p className="hint">Nog geen verbeterpunten binnengekomen.</p>}
-          {feedback.map((f) => (
-            <div className="published-row" key={f.id} style={{ alignItems: "flex-start" }}>
-              <span style={{ minWidth: 0 }}>
-                <span style={{ fontSize: 14, display: "block" }}>{f.text}</span>
-                <span className="hint" style={{ display: "block" }}>
-                  {f.name || "Anoniem"} • {fmtDate(f.createdAt)}
-                </span>
-              </span>
-              <button
-                onClick={() => deleteFeedback(f.id)}
-                title="Afvinken / verwijderen"
-                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)", flexShrink: 0 }}
-              >
-                <Check size={16} />
-              </button>
-            </div>
-          ))}
-
-          <div className="section-title" style={{ marginTop: 32 }}>
             <Clock size={18} /> Wacht op goedkeuring ({pending.length})
           </div>
           {pending.length === 0 && <p className="hint">Niets om te beoordelen — mooi rustig.</p>}
@@ -784,6 +670,120 @@ export default function AdminPage() {
                   </div>
                 </>
               )}
+            </div>
+          ))}
+
+          <div className="section-title" style={{ marginTop: 32 }}>
+            <Clock size={18} /> Belangrijke data (wijkagenda)
+          </div>
+          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
+            Terugkerende afspraken zoals de potluck of tempelavond. Deze verschijnen boven in de wijkkrant.
+          </p>
+          {agendaDates.length === 0 && <p className="hint">Nog geen data toegevoegd.</p>}
+          {agendaDates.map((d) => (
+            <div className="published-row" key={d.id}>
+              <span style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: 14 }}>{d.title}</strong>
+                <span className="hint" style={{ display: "block" }}>
+                  {d.when}
+                  {d.note ? ` — ${d.note}` : ""}
+                </span>
+              </span>
+              <button
+                onClick={() => deleteAgendaDate(d.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
+          <form className="admin-post" onSubmit={addAgendaDate} style={{ marginTop: 12 }}>
+            <label className="field-label">Titel</label>
+            <input
+              value={agendaForm.title}
+              onChange={(e) => setAgendaForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="Bijv. Potluck eten"
+            />
+            <label className="field-label">Wanneer</label>
+            <input
+              value={agendaForm.when}
+              onChange={(e) => setAgendaForm((f) => ({ ...f, when: e.target.value }))}
+              placeholder="Bijv. Elke 5e zondag van de maand, 12:00"
+            />
+            <label className="field-label">Notitie (optioneel)</label>
+            <input
+              value={agendaForm.note}
+              onChange={(e) => setAgendaForm((f) => ({ ...f, note: e.target.value }))}
+              placeholder="Bijv. Neem iets lekkers mee om te delen"
+              style={{ marginBottom: 16 }}
+            />
+            <button className="btn btn-sm" disabled={agendaBusy}>
+              {agendaBusy ? "Bezig..." : "Toevoegen"}
+            </button>
+          </form>
+
+          <div className="section-title" style={{ marginTop: 32 }}>
+            <Clock size={18} /> Schoonmaakrooster
+          </div>
+          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
+            Wie is welke week ingedeeld. Verschijnt ook boven in de wijkkrant.
+          </p>
+          {roster.length === 0 && <p className="hint">Nog niemand ingedeeld.</p>}
+          {roster.map((r) => (
+            <div className="published-row" key={r.id}>
+              <span style={{ fontSize: 14 }}>
+                {fmtDateStr(r.date)} — <strong>{r.who}</strong>
+              </span>
+              <button
+                onClick={() => deleteRosterEntry(r.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
+          <form className="admin-post" onSubmit={addRosterEntry} style={{ marginTop: 12 }}>
+            <label className="field-label">Datum (van die week)</label>
+            <input
+              type="date"
+              value={rosterForm.date}
+              onChange={(e) => setRosterForm((f) => ({ ...f, date: e.target.value }))}
+            />
+            <label className="field-label">Wie is ingedeeld</label>
+            <input
+              value={rosterForm.who}
+              onChange={(e) => setRosterForm((f) => ({ ...f, who: e.target.value }))}
+              placeholder="Bijv. Familie Jansen"
+              style={{ marginBottom: 16 }}
+            />
+            <button className="btn btn-sm" disabled={rosterBusy}>
+              {rosterBusy ? "Bezig..." : "Toevoegen"}
+            </button>
+          </form>
+
+          <div className="section-title" style={{ marginTop: 32 }}>
+            <MessageSquarePlus size={18} /> Verbeterpunten van leden ({feedback.length})
+          </div>
+          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
+            Dit komt binnen via het zwevende knopje rechtsonder op de wijkkrant. Vink af (verwijder) zodra je 'm hebt
+            verwerkt.
+          </p>
+          {feedback.length === 0 && <p className="hint">Nog geen verbeterpunten binnengekomen.</p>}
+          {feedback.map((f) => (
+            <div className="published-row" key={f.id} style={{ alignItems: "flex-start" }}>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ fontSize: 14, display: "block" }}>{f.text}</span>
+                <span className="hint" style={{ display: "block" }}>
+                  {f.name || "Anoniem"} • {fmtDate(f.createdAt)}
+                </span>
+              </span>
+              <button
+                onClick={() => deleteFeedback(f.id)}
+                title="Afvinken / verwijderen"
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)", flexShrink: 0 }}
+              >
+                <Check size={16} />
+              </button>
             </div>
           ))}
 
