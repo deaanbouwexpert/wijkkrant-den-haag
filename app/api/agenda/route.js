@@ -26,7 +26,11 @@ export async function POST(req) {
     note: (note || "").trim(),
     createdAt: new Date().toISOString(),
   };
-  await setAgendaDates([...dates, entry]);
+  try {
+    await setAgendaDates([...dates, entry]);
+  } catch (e) {
+    return NextResponse.json({ error: `Opslaan is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, entry });
 }
@@ -37,6 +41,10 @@ export async function DELETE(req) {
   }
   const { id } = await req.json();
   const dates = await getAgendaDates();
-  await setAgendaDates(dates.filter((d) => d.id !== id));
+  try {
+    await setAgendaDates(dates.filter((d) => d.id !== id));
+  } catch (e) {
+    return NextResponse.json({ error: `Verwijderen is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

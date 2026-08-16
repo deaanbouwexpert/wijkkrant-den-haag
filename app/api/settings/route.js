@@ -16,6 +16,10 @@ export async function POST(req) {
   const updates = await req.json();
   const current = await getSettings();
   const next = { ...current, ...updates };
-  await setSettings(next);
+  try {
+    await setSettings(next);
+  } catch (e) {
+    return NextResponse.json({ error: `Opslaan is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true, settings: next });
 }

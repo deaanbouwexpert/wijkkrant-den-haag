@@ -19,6 +19,10 @@ export async function POST(req) {
     return NextResponse.json({ error: "Nieuw wachtwoord ontbreekt." }, { status: 400 });
   }
   const cfg = await getConfig();
-  await setConfig({ ...cfg, password: newPassword.trim() });
+  try {
+    await setConfig({ ...cfg, password: newPassword.trim() });
+  } catch (e) {
+    return NextResponse.json({ error: `Opslaan is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

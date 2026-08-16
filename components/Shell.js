@@ -118,16 +118,23 @@ export default function Shell({ children, active }) {
     return () => document.removeEventListener("mousedown", onClick);
   }, [feedbackOpen]);
 
+  const [feedbackError, setFeedbackError] = useState("");
+
   const submitFeedback = async (e) => {
     e.preventDefault();
     if (!feedbackText.trim()) return;
     setFeedbackBusy(true);
+    setFeedbackError("");
     try {
-      await fetch("/api/feedback", {
+      const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: feedbackName, text: feedbackText }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || "versturen mislukt");
+      }
       setFeedbackSent(true);
       setFeedbackText("");
       setFeedbackName("");
@@ -135,8 +142,9 @@ export default function Shell({ children, active }) {
         setFeedbackOpen(false);
         setFeedbackSent(false);
       }, 2200);
-    } catch {
-      // stil laten mislukken; het knopje blijft gewoon staan zodat iemand het nog een keer kan proberen
+    } catch (err) {
+      // Blijft zichtbaar staan zodat iemand het nog een keer kan proberen — geen vals bedankje.
+      setFeedbackError(err.message || "Versturen is niet gelukt, probeer het nog eens.");
     }
     setFeedbackBusy(false);
   };
@@ -328,6 +336,7 @@ export default function Shell({ children, active }) {
                     onChange={(e) => setFeedbackName(e.target.value)}
                     placeholder={t(lang, "feedbackNamePlaceholder")}
                   />
+                  {feedbackError && <p className="error-text">{feedbackError}</p>}
                   <button className="btn btn-sm btn-full" disabled={feedbackBusy}>
                     {feedbackBusy ? t(lang, "loading") : t(lang, "feedbackSend")}
                   </button>

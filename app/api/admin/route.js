@@ -43,7 +43,11 @@ export async function POST(req) {
     createdAt: new Date().toISOString(),
   };
   posts.push(post);
-  await setPosts(posts);
+  try {
+    await setPosts(posts);
+  } catch (e) {
+    return NextResponse.json({ error: `Opslaan is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, id: post.id });
 }
@@ -63,7 +67,11 @@ export async function PATCH(req) {
     }
     return merged;
   });
-  await setPosts(next);
+  try {
+    await setPosts(next);
+  } catch (e) {
+    return NextResponse.json({ error: `Opslaan is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -74,6 +82,10 @@ export async function DELETE(req) {
   const { id } = await req.json();
   const posts = await getPosts();
   const next = posts.filter((p) => p.id !== id);
-  await setPosts(next);
+  try {
+    await setPosts(next);
+  } catch (e) {
+    return NextResponse.json({ error: `Verwijderen is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

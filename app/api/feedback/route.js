@@ -27,7 +27,11 @@ export async function POST(req) {
     text: text.trim(),
     createdAt: new Date().toISOString(),
   };
-  await setFeedback([...feedback, entry]);
+  try {
+    await setFeedback([...feedback, entry]);
+  } catch (e) {
+    return NextResponse.json({ error: `Opslaan is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
@@ -38,6 +42,10 @@ export async function DELETE(req) {
   }
   const { id } = await req.json();
   const feedback = await getFeedback();
-  await setFeedback(feedback.filter((f) => f.id !== id));
+  try {
+    await setFeedback(feedback.filter((f) => f.id !== id));
+  } catch (e) {
+    return NextResponse.json({ error: `Verwijderen is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

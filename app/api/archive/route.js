@@ -30,7 +30,11 @@ export async function POST(req) {
     url: publicUrl,
     createdAt: new Date().toISOString(),
   };
-  await setArchive([...archive, entry]);
+  try {
+    await setArchive([...archive, entry]);
+  } catch (e) {
+    return NextResponse.json({ error: `Opslaan is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, entry });
 }
@@ -41,6 +45,10 @@ export async function DELETE(req) {
   }
   const { id } = await req.json();
   const archive = await getArchive();
-  await setArchive(archive.filter((a) => a.id !== id));
+  try {
+    await setArchive(archive.filter((a) => a.id !== id));
+  } catch (e) {
+    return NextResponse.json({ error: `Verwijderen is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

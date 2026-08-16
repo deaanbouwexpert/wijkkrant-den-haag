@@ -136,32 +136,44 @@ export default function AdminPage() {
   };
 
   const approve = async (id) => {
-    await fetch("/api/admin", {
+    const res = await fetch("/api/admin", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
       body: JSON.stringify({ id, updates: { status: "published" } }),
     });
-    showToast("Geplaatst in de wijkkrant.");
+    if (res.ok) {
+      showToast("Geplaatst in de wijkkrant.");
+    } else {
+      showToast("Plaatsen is niet gelukt — probeer het nog eens.");
+    }
     reload();
   };
 
   const reject = async (id) => {
-    await fetch("/api/admin", {
+    const res = await fetch("/api/admin", {
       method: "DELETE",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
       body: JSON.stringify({ id }),
     });
-    showToast("Bijdrage afgewezen.");
+    if (res.ok) {
+      showToast("Bijdrage afgewezen.");
+    } else {
+      showToast("Afwijzen is niet gelukt — probeer het nog eens.");
+    }
     reload();
   };
 
   const unpublish = async (id) => {
-    await fetch("/api/admin", {
+    const res = await fetch("/api/admin", {
       method: "DELETE",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
       body: JSON.stringify({ id }),
     });
-    showToast("Verwijderd uit de wijkkrant.");
+    if (res.ok) {
+      showToast("Verwijderd uit de wijkkrant.");
+    } else {
+      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+    }
     reload();
   };
 
@@ -233,12 +245,16 @@ export default function AdminPage() {
   };
 
   const deleteArchive = async (id) => {
-    await fetch("/api/archive", {
+    const res = await fetch("/api/archive", {
       method: "DELETE",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
       body: JSON.stringify({ id }),
     });
-    showToast("Verwijderd uit het archief.");
+    if (res.ok) {
+      showToast("Verwijderd uit het archief.");
+    } else {
+      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+    }
     loadArchive();
   };
 
@@ -273,12 +289,16 @@ export default function AdminPage() {
   };
 
   const deleteAgendaDate = async (id) => {
-    await fetch("/api/agenda", {
+    const res = await fetch("/api/agenda", {
       method: "DELETE",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
       body: JSON.stringify({ id }),
     });
-    showToast("Verwijderd.");
+    if (res.ok) {
+      showToast("Verwijderd.");
+    } else {
+      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+    }
     loadAgenda();
   };
 
@@ -313,12 +333,16 @@ export default function AdminPage() {
   };
 
   const deleteRosterEntry = async (id) => {
-    await fetch("/api/roster", {
+    const res = await fetch("/api/roster", {
       method: "DELETE",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
       body: JSON.stringify({ id }),
     });
-    showToast("Verwijderd.");
+    if (res.ok) {
+      showToast("Verwijderd.");
+    } else {
+      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+    }
     loadRoster();
   };
 
@@ -331,12 +355,16 @@ export default function AdminPage() {
   };
 
   const deleteFeedback = async (id) => {
-    await fetch("/api/feedback", {
+    const res = await fetch("/api/feedback", {
       method: "DELETE",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
       body: JSON.stringify({ id }),
     });
-    showToast("Verwijderd.");
+    if (res.ok) {
+      showToast("Verwijderd.");
+    } else {
+      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+    }
     loadFeedback();
   };
 
@@ -468,6 +496,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ images: resized }),
       });
+      if (!up.ok) throw new Error("upload mislukt");
       const upData = await up.json();
       const urls = upData.urls || [];
       await saveSettings({ headerImages: [...(settings.headerImages || []), ...urls] });
@@ -490,6 +519,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ images: [resized] }),
       });
+      if (!up.ok) throw new Error("upload mislukt");
       const upData = await up.json();
       await saveSettings({ pageBackgroundImage: upData.urls?.[0] || null });
     } catch {
@@ -518,6 +548,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ images: resized }),
       });
+      if (!up.ok) throw new Error("upload mislukt");
       const upData = await up.json();
       const urls = upData.urls || [];
       setDraft((d) => ({ ...d, images: [...(d.images || []), ...urls] }));
@@ -528,14 +559,19 @@ export default function AdminPage() {
   };
 
   const saveEdit = async () => {
-    await fetch("/api/admin", {
+    const res = await fetch("/api/admin", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
       body: JSON.stringify({ id: editingId, updates: draft }),
     });
-    setEditingId(null);
-    setDraft(null);
-    showToast("Wijzigingen opgeslagen.");
+    if (res.ok) {
+      setEditingId(null);
+      setDraft(null);
+      showToast("Wijzigingen opgeslagen.");
+    } else {
+      const d = await res.json().catch(() => ({}));
+      showToast(d.error || "Opslaan is niet gelukt — je wijzigingen staan nog open, probeer het nog eens.");
+    }
     reload();
   };
 

@@ -26,7 +26,11 @@ export async function POST(req) {
     who: who.trim(),
     createdAt: new Date().toISOString(),
   };
-  await setCleaningRoster([...roster, entry]);
+  try {
+    await setCleaningRoster([...roster, entry]);
+  } catch (e) {
+    return NextResponse.json({ error: `Opslaan is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, entry });
 }
@@ -37,6 +41,10 @@ export async function DELETE(req) {
   }
   const { id } = await req.json();
   const roster = await getCleaningRoster();
-  await setCleaningRoster(roster.filter((r) => r.id !== id));
+  try {
+    await setCleaningRoster(roster.filter((r) => r.id !== id));
+  } catch (e) {
+    return NextResponse.json({ error: `Verwijderen is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
