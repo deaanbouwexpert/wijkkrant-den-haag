@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getPosts, setPosts } from "../../../lib/kv";
 import { checkAdminPassword } from "../../../lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req) {
   if (!(await checkAdminPassword(req))) {
     return NextResponse.json({ error: "Onjuist wachtwoord." }, { status: 401 });

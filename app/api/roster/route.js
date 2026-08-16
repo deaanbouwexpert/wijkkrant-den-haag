@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getCleaningRoster, setCleaningRoster } from "../../../lib/kv";
 import { checkAdminPassword } from "../../../lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const roster = await getCleaningRoster();
   const sorted = [...roster].sort((a, b) => (a.date || "").localeCompare(b.date || ""));

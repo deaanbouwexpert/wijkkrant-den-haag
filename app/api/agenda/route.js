@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getAgendaDates, setAgendaDates } from "../../../lib/kv";
 import { checkAdminPassword } from "../../../lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const dates = await getAgendaDates();
   return NextResponse.json({ dates });

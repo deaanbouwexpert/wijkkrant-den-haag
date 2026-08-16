@@ -9,6 +9,8 @@ import {
   getFeedback,
 } from "../../../../lib/kv";
 
+export const dynamic = "force-dynamic";
+
 // Geeft een volledige export van alle wijkkrant-data terug, zodat de redactie
 // zelf af en toe een reservekopie kan downloaden en bewaren.
 export async function GET(req) {

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getArchive, setArchive } from "../../../lib/kv";
 import { checkAdminPassword } from "../../../lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const archive = await getArchive();
   const sorted = [...archive].sort((a, b) => (b.year - a.year) || (b.month - a.month) || (a.lang < b.lang ? -1 : 1));

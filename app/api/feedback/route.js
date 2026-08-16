@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getFeedback, setFeedback } from "../../../lib/kv";
 import { checkAdminPassword } from "../../../lib/auth";
 
+export const dynamic = "force-dynamic";
+
 // De redactie bekijkt hier de ingestuurde verbeterpunten (wachtwoord vereist).
 export async function GET(req) {
   if (!(await checkAdminPassword(req))) {

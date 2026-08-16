@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const VARIANT_STYLES = [
   { id: "kort", label: "Kort & bondig", instruction: "kort en bondig, to-the-point, geschikt voor een korte mededeling" },
   { id: "verhalend", label: "Warm verteld", instruction: "warm en verhalend, met wat sfeer en gevoel, alsof je het aan een vriend vertelt" },

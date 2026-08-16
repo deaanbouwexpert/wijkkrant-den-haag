@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPosts, setPosts } from "../../../lib/kv";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const posts = await getPosts();
   const published = posts

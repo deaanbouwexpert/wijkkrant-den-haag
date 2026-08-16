@@ -8,6 +8,8 @@ import {
   setCleaningRoster,
 } from "../../../lib/kv";
 
+export const dynamic = "force-dynamic";
+
 function targetName(targetLang) {
   return targetLang === "en" ? "Engels" : targetLang === "es" ? "Spaans" : "Nederlands";
 }
