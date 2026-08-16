@@ -57,6 +57,17 @@ export default function Shell({ children, active }) {
 
   const teamMembers = (name) => teams.find((t) => t.name === name)?.members || [];
 
+  // In plaats van alle 53 weken van het jaar te tonen (veel te druk voor een
+  // dropdown), laten we alleen zien wie er NU aan de beurt is en wie daarna komt.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const sortedRoster = [...roster].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const upcomingRoster = sortedRoster.filter((r) => r.date >= todayStr);
+  const pastRoster = sortedRoster.filter((r) => r.date < todayStr);
+  const relevantRoster = [
+    ...(pastRoster.length > 0 ? [pastRoster[pastRoster.length - 1]] : []),
+    ...upcomingRoster.slice(0, 2),
+  ].slice(0, 3);
+
   // Zodra een andere taal dan Nederlands gekozen wordt: vertaal (en cache) elk
   // agenda-item en elke roosterregel dat nog geen vertaling in die taal heeft.
   useEffect(() => {
@@ -94,25 +105,31 @@ export default function Shell({ children, active }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang, agendaDates.length, roster.length]);
 
-  // Dropdown sluiten als je ergens anders klikt, scrollt, of het venster van grootte verandert
-  // (anders klopt de berekende positie niet meer).
+  // Dropdown sluiten als je ergens anders klikt, of het venster van grootte
+  // verandert (dan klopt de berekende positie niet meer). Scrollen doen we hier
+  // bewust NIET op reageren als het scrollen binnen de dropdown zelf gebeurt —
+  // anders klapt hij meteen dicht zodra je in een lange lijst probeert te scrollen.
   useEffect(() => {
     if (!agendaOpen && !rosterOpen) return;
-    const close = () => {
-      setAgendaOpen(false);
-      setRosterOpen(false);
-    };
     const onClick = (e) => {
       if (agendaOpen && agendaRef.current && !agendaRef.current.contains(e.target)) setAgendaOpen(false);
       if (rosterOpen && rosterRef.current && !rosterRef.current.contains(e.target)) setRosterOpen(false);
     };
+    const onScroll = (e) => {
+      if (agendaOpen && agendaRef.current && !agendaRef.current.contains(e.target)) setAgendaOpen(false);
+      if (rosterOpen && rosterRef.current && !rosterRef.current.contains(e.target)) setRosterOpen(false);
+    };
+    const onResize = () => {
+      setAgendaOpen(false);
+      setRosterOpen(false);
+    };
     document.addEventListener("mousedown", onClick);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
     return () => {
       document.removeEventListener("mousedown", onClick);
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
     };
   }, [agendaOpen, rosterOpen]);
 
@@ -301,12 +318,15 @@ export default function Shell({ children, active }) {
                   className="nav-dropdown"
                   style={{ position: "fixed", top: rosterPos.top, left: rosterPos.left, transform: "translateX(-50%)" }}
                 >
-                  {roster.map((r) => {
+                  {relevantRoster.map((r, i) => {
                     const tr = lang !== "nl" ? r.translations?.[lang] : null;
                     const members = teamMembers(r.who);
                     const isExpanded = expandedTeam === r.id;
                     return (
                       <div className="nav-dropdown-item" key={r.id}>
+                        {i === 0 && pastRoster.length > 0 && (
+                          <span className="roster-now-badge">{t(lang, "rosterNowLabel")}</span>
+                        )}
                         <button
                           type="button"
                           className="nav-dropdown-item-row roster-row-btn"
