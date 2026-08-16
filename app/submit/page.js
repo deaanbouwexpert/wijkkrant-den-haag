@@ -100,6 +100,10 @@ export default function SubmitPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ images }),
         });
+        if (!up.ok) {
+          const errData = await up.json().catch(() => ({}));
+          throw new Error(errData.error || `foto-upload mislukt (${up.status})`);
+        }
         const upData = await up.json();
         uploadedUrls = upData.urls || [];
       }
@@ -123,7 +127,7 @@ export default function SubmitPage() {
 
       const finalText = form.text.trim();
 
-      await fetch("/api/posts", {
+      const postRes = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -137,9 +141,13 @@ export default function SubmitPage() {
           pdfName: pdfFile ? pdfFile.name : "",
         }),
       });
+      if (!postRes.ok) {
+        const errData = await postRes.json().catch(() => ({}));
+        throw new Error(errData.error || `server-fout (${postRes.status})`);
+      }
       setDone(true);
     } catch (e) {
-      setError(t(lang, "errSend"));
+      setError(`${t(lang, "errSend")} (${e.message || "onbekende fout"})`);
     }
     setBusy(false);
   };

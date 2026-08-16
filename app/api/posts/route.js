@@ -39,7 +39,11 @@ export async function POST(req) {
     createdAt: new Date().toISOString(),
   };
   posts.push(post);
-  await setPosts(posts);
+  try {
+    await setPosts(posts);
+  } catch (e) {
+    return NextResponse.json({ error: `Opslaan is mislukt: ${e.message || "onbekende fout"}` }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, id: post.id });
 }
