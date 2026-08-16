@@ -153,10 +153,22 @@ export default function Shell({ children, active }) {
     setFeedbackBusy(false);
   };
 
+  // Berekent de positie van een dropdown onder een knop, maar klemt 'm binnen het
+  // scherm vast — anders kan een gecentreerde dropdown bij een knop die niet
+  // precies in het midden staat (zoals op mobiel vaak het geval is) links of
+  // rechts van het scherm afvallen.
+  const computeDropdownPos = (rect) => {
+    const vw = window.innerWidth;
+    const width = Math.min(320, vw * 0.88);
+    const idealLeft = rect.left + rect.width / 2 - width / 2;
+    const margin = 12;
+    const left = Math.max(margin, Math.min(idealLeft, vw - width - margin));
+    return { top: rect.bottom + 8, left };
+  };
+
   const toggleAgenda = () => {
     if (!agendaOpen && agendaRef.current) {
-      const rect = agendaRef.current.getBoundingClientRect();
-      setAgendaPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+      setAgendaPos(computeDropdownPos(agendaRef.current.getBoundingClientRect()));
     }
     setRosterOpen(false);
     setAgendaOpen((v) => !v);
@@ -164,8 +176,7 @@ export default function Shell({ children, active }) {
 
   const toggleRoster = () => {
     if (!rosterOpen && rosterRef.current) {
-      const rect = rosterRef.current.getBoundingClientRect();
-      setRosterPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+      setRosterPos(computeDropdownPos(rosterRef.current.getBoundingClientRect()));
     }
     setAgendaOpen(false);
     setRosterOpen((v) => !v);
@@ -265,7 +276,7 @@ export default function Shell({ children, active }) {
               {agendaOpen && (
                 <div
                   className="nav-dropdown"
-                  style={{ position: "fixed", top: agendaPos.top, left: agendaPos.left, transform: "translateX(-50%)" }}
+                  style={{ position: "fixed", top: agendaPos.top, left: agendaPos.left }}
                 >
                   {agendaDates.map((d) => {
                     const tr = lang !== "nl" ? d.translations?.[lang] : null;
@@ -295,7 +306,7 @@ export default function Shell({ children, active }) {
               {rosterOpen && (
                 <div
                   className="nav-dropdown"
-                  style={{ position: "fixed", top: rosterPos.top, left: rosterPos.left, transform: "translateX(-50%)" }}
+                  style={{ position: "fixed", top: rosterPos.top, left: rosterPos.left }}
                 >
                   {relevantRoster.map((r, i) => {
                     const members = teamMembers(r.who);
