@@ -4,7 +4,7 @@ import Shell from "../../components/Shell";
 import { useSettings, DEFAULTS } from "../../components/SettingsProvider";
 import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
-import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText, MessageSquarePlus, Download } from "lucide-react";
+import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText, MessageSquarePlus, Download, Users } from "lucide-react";
 
 const MAX_IMAGES = 6;
 
@@ -83,6 +83,11 @@ export default function AdminPage() {
   const [roster, setRosterList] = useState([]);
   const [rosterForm, setRosterForm] = useState({ date: "", who: "" });
   const [rosterBusy, setRosterBusy] = useState(false);
+  const [teams, setTeamsList] = useState([]);
+  const [teamForm, setTeamForm] = useState({ name: "", membersText: "" });
+  const [teamBusy, setTeamBusy] = useState(false);
+  const [editingTeamId, setEditingTeamId] = useState(null);
+  const [expandedTeamId, setExpandedTeamId] = useState(null);
   const [feedback, setFeedbackList] = useState([]);
   const [settings, setSettingsLocal, refreshSettings] = useSettings();
   const [settingsBusy, setSettingsBusy] = useState(false);
@@ -114,6 +119,7 @@ export default function AdminPage() {
       loadAgenda();
       loadRoster();
       loadFeedback();
+      loadTeams();
     } else {
       setPwErr("Onjuist wachtwoord.");
       sessionStorage.removeItem("wk_admin_pw");
@@ -344,6 +350,65 @@ export default function AdminPage() {
       showToast("Verwijderen is niet gelukt — probeer het nog eens.");
     }
     loadRoster();
+  };
+
+  const loadTeams = async () => {
+    const res = await fetch("/api/teams");
+    if (res.ok) {
+      const data = await res.json();
+      setTeamsList(data.teams || []);
+    }
+  };
+
+  const startEditTeam = (t) => {
+    setEditingTeamId(t.id);
+    setTeamForm({ name: t.name, membersText: (t.members || []).join("\n") });
+  };
+
+  const cancelEditTeam = () => {
+    setEditingTeamId(null);
+    setTeamForm({ name: "", membersText: "" });
+  };
+
+  const saveTeam = async (e) => {
+    e.preventDefault();
+    if (!teamForm.name.trim()) {
+      showToast("Vul een teamnaam in.");
+      return;
+    }
+    setTeamBusy(true);
+    const members = teamForm.membersText
+      .split("\n")
+      .map((m) => m.trim())
+      .filter(Boolean);
+    const res = await fetch("/api/teams", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify({ id: editingTeamId, name: teamForm.name, members }),
+    });
+    if (res.ok) {
+      showToast(editingTeamId ? "Team bijgewerkt." : "Team toegevoegd.");
+      cancelEditTeam();
+      loadTeams();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      showToast(d.error || "Opslaan is niet gelukt.");
+    }
+    setTeamBusy(false);
+  };
+
+  const deleteTeam = async (id) => {
+    const res = await fetch("/api/teams", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      showToast("Team verwijderd.");
+    } else {
+      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+    }
+    loadTeams();
   };
 
   const loadFeedback = async () => {
@@ -784,10 +849,70 @@ export default function AdminPage() {
           </form>
 
           <div className="section-title" style={{ marginTop: 32 }}>
+            <Users size={18} /> Schoonmaak-teams
+          </div>
+          <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
+            Maak hier elk team aan met de bijbehorende leden. In het schoonmaakrooster hieronder kies je per week
+            welk team aan de beurt is — op de wijkkrant zie je dan alleen "Team X", met een tikje om de namen te
+            onthullen.
+          </p>
+          {teams.length === 0 && <p className="hint">Nog geen teams aangemaakt.</p>}
+          {teams.map((t) => (
+            <div className="published-row" key={t.id} style={{ alignItems: "flex-start" }}>
+              <span style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: 14 }}>{t.name}</strong>
+                <span className="hint" style={{ display: "block" }}>
+                  {(t.members || []).length} leden: {(t.members || []).join(", ") || "—"}
+                </span>
+              </span>
+              <span style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                <button
+                  onClick={() => startEditTeam(t)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.35)" }}
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => deleteTeam(t.id)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </span>
+            </div>
+          ))}
+          <form className="admin-post" onSubmit={saveTeam} style={{ marginTop: 12 }}>
+            <label className="field-label">Teamnaam</label>
+            <input
+              value={teamForm.name}
+              onChange={(e) => setTeamForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Bijv. Team 7"
+            />
+            <label className="field-label">Leden (één naam per regel)</label>
+            <textarea
+              rows={5}
+              value={teamForm.membersText}
+              onChange={(e) => setTeamForm((f) => ({ ...f, membersText: e.target.value }))}
+              placeholder={"Diederik Linders\nIan Prosman\nAthena Wijsman\n..."}
+              style={{ marginBottom: 12 }}
+            />
+            <div className="admin-actions">
+              <button className="btn btn-sm" disabled={teamBusy}>
+                {teamBusy ? "Bezig..." : editingTeamId ? "Team bijwerken" : "Team toevoegen"}
+              </button>
+              {editingTeamId && (
+                <button type="button" className="btn btn-sm btn-outline" onClick={cancelEditTeam}>
+                  Annuleren
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="section-title" style={{ marginTop: 32 }}>
             <Clock size={18} /> Schoonmaakrooster
           </div>
           <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Wie is welke week ingedeeld. Verschijnt ook boven in de wijkkrant.
+            Welk team welke week aan de beurt is. Verschijnt ook boven in de wijkkrant.
           </p>
           {roster.length === 0 && <p className="hint">Nog niemand ingedeeld.</p>}
           {roster.map((r) => (
@@ -810,13 +935,28 @@ export default function AdminPage() {
               value={rosterForm.date}
               onChange={(e) => setRosterForm((f) => ({ ...f, date: e.target.value }))}
             />
-            <label className="field-label">Wie is ingedeeld</label>
-            <input
-              value={rosterForm.who}
-              onChange={(e) => setRosterForm((f) => ({ ...f, who: e.target.value }))}
-              placeholder="Bijv. Familie Jansen"
-              style={{ marginBottom: 16 }}
-            />
+            <label className="field-label">Welk team is ingedeeld</label>
+            {teams.length > 0 ? (
+              <select
+                value={rosterForm.who}
+                onChange={(e) => setRosterForm((f) => ({ ...f, who: e.target.value }))}
+                style={{ marginBottom: 16 }}
+              >
+                <option value="">Kies een team...</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.name}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={rosterForm.who}
+                onChange={(e) => setRosterForm((f) => ({ ...f, who: e.target.value }))}
+                placeholder="Bijv. Team 7 (maak hierboven eerst teams aan)"
+                style={{ marginBottom: 16 }}
+              />
+            )}
             <button className="btn btn-sm" disabled={rosterBusy}>
               {rosterBusy ? "Bezig..." : "Toevoegen"}
             </button>

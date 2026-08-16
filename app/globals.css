@@ -141,6 +141,35 @@ body {
   font-size: 14px;
   font-weight: 700;
   color: rgba(0, 0, 0, 0.85);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.roster-row-btn {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.roster-team-reveal {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(47, 74, 66, 0.07);
+}
+.roster-team-reveal p {
+  margin: 0;
+  font-size: 13px;
+}
+.roster-team-reveal p:first-child {
+  margin-bottom: 6px;
+  color: var(--brand);
+  font-weight: 600;
+}
+.roster-team-names {
+  color: rgba(0, 0, 0, 0.75);
 }
 
 .feedback-fab-wrap {

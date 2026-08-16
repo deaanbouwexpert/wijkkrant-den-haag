@@ -27,6 +27,8 @@ export default function Shell({ children, active }) {
   const [roster, setRoster] = useState([]);
   const [rosterPos, setRosterPos] = useState({ top: 0, left: 0 });
   const rosterRef = useRef(null);
+  const [teams, setTeams] = useState([]);
+  const [expandedTeam, setExpandedTeam] = useState(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackName, setFeedbackName] = useState("");
   const [feedbackText, setFeedbackText] = useState("");
@@ -47,7 +49,13 @@ export default function Shell({ children, active }) {
       .then((r) => r.json())
       .then((d) => setRoster(d.roster || []))
       .catch(() => {});
+    fetch("/api/teams")
+      .then((r) => r.json())
+      .then((d) => setTeams(d.teams || []))
+      .catch(() => {});
   }, []);
+
+  const teamMembers = (name) => teams.find((t) => t.name === name)?.members || [];
 
   // Zodra een andere taal dan Nederlands gekozen wordt: vertaal (en cache) elk
   // agenda-item en elke roosterregel dat nog geen vertaling in die taal heeft.
@@ -295,10 +303,29 @@ export default function Shell({ children, active }) {
                 >
                   {roster.map((r) => {
                     const tr = lang !== "nl" ? r.translations?.[lang] : null;
+                    const members = teamMembers(r.who);
+                    const isExpanded = expandedTeam === r.id;
                     return (
-                      <div className="nav-dropdown-item nav-dropdown-item-row" key={r.id}>
-                        <span className="roster-date">{fmtDateStrLang(r.date, lang)}</span>
-                        <span className="roster-who">{tr?.who || r.who}</span>
+                      <div className="nav-dropdown-item" key={r.id}>
+                        <button
+                          type="button"
+                          className="nav-dropdown-item-row roster-row-btn"
+                          onClick={() => members.length > 0 && setExpandedTeam(isExpanded ? null : r.id)}
+                        >
+                          <span className="roster-date">{fmtDateStrLang(r.date, lang)}</span>
+                          <span className="roster-who">
+                            {tr?.who || r.who}
+                            {members.length > 0 && (
+                              <ChevronDown size={12} style={{ transform: isExpanded ? "rotate(180deg)" : "none" }} />
+                            )}
+                          </span>
+                        </button>
+                        {isExpanded && members.length > 0 && (
+                          <div className="roster-team-reveal">
+                            <p>{t(lang, "rosterTeamIntro")}</p>
+                            <p className="roster-team-names">{members.join(", ")}</p>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
