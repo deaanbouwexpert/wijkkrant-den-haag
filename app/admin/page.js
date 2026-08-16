@@ -84,6 +84,8 @@ export default function AdminPage() {
   const [rosterForm, setRosterForm] = useState({ date: "", who: "" });
   const [rosterBusy, setRosterBusy] = useState(false);
   const [showPastRoster, setShowPastRoster] = useState(false);
+  const [showAllUpcomingRoster, setShowAllUpcomingRoster] = useState(false);
+  const UPCOMING_ROSTER_PREVIEW = 5;
   const [teams, setTeamsList] = useState([]);
   const [teamForm, setTeamForm] = useState({ name: "", membersText: "" });
   const [teamBusy, setTeamBusy] = useState(false);
@@ -920,7 +922,9 @@ export default function AdminPage() {
             const sorted = [...roster].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
             const upcoming = sorted.filter((r) => r.date >= todayStr);
             const past = sorted.filter((r) => r.date < todayStr).reverse();
-            const shown = showPastRoster ? [...past].reverse().concat(upcoming) : upcoming;
+            const visibleUpcoming = showAllUpcomingRoster ? upcoming : upcoming.slice(0, UPCOMING_ROSTER_PREVIEW);
+            const shown = showPastRoster ? [...past].reverse().concat(visibleUpcoming) : visibleUpcoming;
+            const hiddenUpcomingCount = upcoming.length - visibleUpcoming.length;
             return (
               <>
                 {roster.length === 0 && <p className="hint">Nog niemand ingedeeld.</p>}
@@ -948,16 +952,35 @@ export default function AdminPage() {
                     </div>
                   );
                 })}
-                {past.length > 0 && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline"
-                    style={{ marginTop: 8 }}
-                    onClick={() => setShowPastRoster((v) => !v)}
-                  >
-                    {showPastRoster ? "Verberg voorbije weken" : `Toon ${past.length} voorbije week(en)`}
-                  </button>
-                )}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                  {hiddenUpcomingCount > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      onClick={() => setShowAllUpcomingRoster(true)}
+                    >
+                      {`Toon nog ${hiddenUpcomingCount} week(en)`}
+                    </button>
+                  )}
+                  {showAllUpcomingRoster && upcoming.length > UPCOMING_ROSTER_PREVIEW && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      onClick={() => setShowAllUpcomingRoster(false)}
+                    >
+                      Beperk tot eerstvolgende {UPCOMING_ROSTER_PREVIEW}
+                    </button>
+                  )}
+                  {past.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      onClick={() => setShowPastRoster((v) => !v)}
+                    >
+                      {showPastRoster ? "Verberg voorbije weken" : `Toon ${past.length} voorbije week(en)`}
+                    </button>
+                  )}
+                </div>
               </>
             );
           })()}
