@@ -4,6 +4,7 @@ import Shell from "../../components/Shell";
 import { useSettings, DEFAULTS } from "../../components/SettingsProvider";
 import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
+import { upcomingTeamWeeks } from "../../lib/rotation";
 import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText, MessageSquarePlus, Download, Users } from "lucide-react";
 
 const MAX_IMAGES = 6;
@@ -81,16 +82,14 @@ export default function AdminPage() {
   const [agendaForm, setAgendaForm] = useState({ title: "", when: "", note: "" });
   const [agendaBusy, setAgendaBusy] = useState(false);
   const [roster, setRosterList] = useState([]);
-  const [rosterForm, setRosterForm] = useState({ date: "", who: "" });
-  const [rosterBusy, setRosterBusy] = useState(false);
-  const [showPastRoster, setShowPastRoster] = useState(false);
-  const [showAllUpcomingRoster, setShowAllUpcomingRoster] = useState(false);
-  const UPCOMING_ROSTER_PREVIEW = 5;
   const [teams, setTeamsList] = useState([]);
   const [teamForm, setTeamForm] = useState({ name: "", membersText: "" });
   const [teamBusy, setTeamBusy] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [expandedTeamId, setExpandedTeamId] = useState(null);
+  const [rotation, setRotation] = useState(null);
+  const [rotationForm, setRotationForm] = useState({ anchorDate: "", orderText: "" });
+  const [rotationBusy, setRotationBusy] = useState(false);
   const [feedback, setFeedbackList] = useState([]);
   const [settings, setSettingsLocal, refreshSettings] = useSettings();
   const [settingsBusy, setSettingsBusy] = useState(false);
@@ -104,6 +103,15 @@ export default function AdminPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Als er nog geen rotatie is ingesteld: alvast een sensibele standaardwaarde
+  // invullen op basis van de bestaande teams, zodat het formulier niet leeg is.
+  useEffect(() => {
+    if (rotation === null && teams.length > 0 && !rotationForm.orderText) {
+      setRotationForm({ anchorDate: "2026-01-12", orderText: teams.map((t) => t.name).join("\n") });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams, rotation]);
 
   const showToast = (m) => {
     setToast(m);
@@ -123,6 +131,7 @@ export default function AdminPage() {
       loadRoster();
       loadFeedback();
       loadTeams();
+      loadRotation();
     } else {
       setPwErr("Onjuist wachtwoord.");
       sessionStorage.removeItem("wk_admin_pw");
@@ -319,26 +328,44 @@ export default function AdminPage() {
     }
   };
 
-  const addRosterEntry = async (e) => {
+  const loadRotation = async () => {
+    const res = await fetch("/api/rotation");
+    if (res.ok) {
+      const data = await res.json();
+      setRotation(data.rotation || null);
+      if (data.rotation) {
+        setRotationForm({
+          anchorDate: data.rotation.anchorDate || "",
+          orderText: (data.rotation.order || []).join("\n"),
+        });
+      }
+    }
+  };
+
+  const saveRotation = async (e) => {
     e.preventDefault();
-    if (!rosterForm.date || !rosterForm.who.trim()) {
-      showToast("Vul een datum en wie in.");
+    const order = rotationForm.orderText
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!rotationForm.anchorDate || order.length === 0) {
+      showToast("Vul een startdatum en minstens één team in.");
       return;
     }
-    setRosterBusy(true);
-    const res = await fetch("/api/roster", {
+    setRotationBusy(true);
+    const res = await fetch("/api/rotation", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-password": pw },
-      body: JSON.stringify(rosterForm),
+      body: JSON.stringify({ anchorDate: rotationForm.anchorDate, order }),
     });
     if (res.ok) {
-      showToast("Toegevoegd aan het schoonmaakrooster.");
-      setRosterForm({ date: "", who: "" });
-      loadRoster();
+      showToast("Rotatie opgeslagen.");
+      loadRotation();
     } else {
-      showToast("Toevoegen is niet gelukt.");
+      const d = await res.json().catch(() => ({}));
+      showToast(d.error || "Opslaan is niet gelukt.");
     }
-    setRosterBusy(false);
+    setRotationBusy(false);
   };
 
   const deleteRosterEntry = async (id) => {
@@ -649,6 +676,7 @@ export default function AdminPage() {
   const published = posts
     .filter((p) => p.status === "published")
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const rotationPreview = rotation ? upcomingTeamWeeks(rotation, 3) : [];
 
   return (
     <Shell active="admin">
@@ -912,111 +940,77 @@ export default function AdminPage() {
           </form>
 
           <div className="section-title" style={{ marginTop: 32 }}>
-            <Clock size={18} /> Schoonmaakrooster
+            <Clock size={18} /> Schoonmaakrooster — automatisch
           </div>
           <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Welk team welke week aan de beurt is. Verschijnt ook boven in de wijkkrant.
+            Stel dit één keer in: een startdatum (een maandag) en de volgorde van teams. Daarna rekent de wijkkrant
+            zelf, voor altijd, uit welk team welke week aan de beurt is — nooit meer handmatig invullen.
           </p>
-          {(() => {
-            const todayStr = new Date().toISOString().slice(0, 10);
-            const sorted = [...roster].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-            const upcoming = sorted.filter((r) => r.date >= todayStr);
-            const past = sorted.filter((r) => r.date < todayStr).reverse();
-            const visibleUpcoming = showAllUpcomingRoster ? upcoming : upcoming.slice(0, UPCOMING_ROSTER_PREVIEW);
-            const shown = showPastRoster ? [...past].reverse().concat(visibleUpcoming) : visibleUpcoming;
-            const hiddenUpcomingCount = upcoming.length - visibleUpcoming.length;
-            return (
-              <>
-                {roster.length === 0 && <p className="hint">Nog niemand ingedeeld.</p>}
-                {roster.length > 0 && shown.length === 0 && (
-                  <p className="hint">Geen aankomende weken meer ingepland.</p>
-                )}
-                {shown.map((r, i) => {
-                  const isCurrent = !showPastRoster ? i === 0 : r.date >= todayStr && upcoming[0]?.id === r.id;
-                  return (
-                    <div className="published-row" key={r.id}>
-                      <span style={{ fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                        {isCurrent && (
-                          <span className="roster-now-badge" style={{ marginBottom: 0 }}>
-                            NU
-                          </span>
-                        )}
-                        {fmtDateStr(r.date)} — <strong>{r.who}</strong>
+          {rotation && rotationPreview.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              {rotationPreview.map((r, i) => (
+                <div className="published-row" key={r.date}>
+                  <span style={{ fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                    {i === 0 && (
+                      <span className="roster-now-badge" style={{ marginBottom: 0 }}>
+                        NU
                       </span>
-                      <button
-                        onClick={() => deleteRosterEntry(r.id)}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  );
-                })}
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-                  {hiddenUpcomingCount > 0 && (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline"
-                      onClick={() => setShowAllUpcomingRoster(true)}
-                    >
-                      {`Toon nog ${hiddenUpcomingCount} week(en)`}
-                    </button>
-                  )}
-                  {showAllUpcomingRoster && upcoming.length > UPCOMING_ROSTER_PREVIEW && (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline"
-                      onClick={() => setShowAllUpcomingRoster(false)}
-                    >
-                      Beperk tot eerstvolgende {UPCOMING_ROSTER_PREVIEW}
-                    </button>
-                  )}
-                  {past.length > 0 && (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline"
-                      onClick={() => setShowPastRoster((v) => !v)}
-                    >
-                      {showPastRoster ? "Verberg voorbije weken" : `Toon ${past.length} voorbije week(en)`}
-                    </button>
-                  )}
+                    )}
+                    {fmtDateStr(r.date)} — <strong>{r.who || "—"}</strong>
+                  </span>
                 </div>
-              </>
-            );
-          })()}
-          <form className="admin-post" onSubmit={addRosterEntry} style={{ marginTop: 12 }}>
-            <label className="field-label">Datum (van die week)</label>
+              ))}
+            </div>
+          )}
+          <form className="admin-post" onSubmit={saveRotation}>
+            <label className="field-label">Startdatum (een maandag, hoort bij het 1e team hieronder)</label>
             <input
               type="date"
-              value={rosterForm.date}
-              onChange={(e) => setRosterForm((f) => ({ ...f, date: e.target.value }))}
+              value={rotationForm.anchorDate}
+              onChange={(e) => setRotationForm((f) => ({ ...f, anchorDate: e.target.value }))}
             />
-            <label className="field-label">Welk team is ingedeeld</label>
-            {teams.length > 0 ? (
-              <select
-                value={rosterForm.who}
-                onChange={(e) => setRosterForm((f) => ({ ...f, who: e.target.value }))}
-                style={{ marginBottom: 16 }}
-              >
-                <option value="">Kies een team...</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.name}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={rosterForm.who}
-                onChange={(e) => setRosterForm((f) => ({ ...f, who: e.target.value }))}
-                placeholder="Bijv. Team 7 (maak hierboven eerst teams aan)"
-                style={{ marginBottom: 16 }}
-              />
-            )}
-            <button className="btn btn-sm" disabled={rosterBusy}>
-              {rosterBusy ? "Bezig..." : "Toevoegen"}
+            <label className="field-label">Volgorde van teams (één per regel, in de juiste rotatie-volgorde)</label>
+            <textarea
+              rows={8}
+              value={rotationForm.orderText}
+              onChange={(e) => setRotationForm((f) => ({ ...f, orderText: e.target.value }))}
+              placeholder={"Team 1\nTeam 2\nTeam 3\n..."}
+              style={{ marginBottom: 12 }}
+            />
+            <button className="btn btn-sm" disabled={rotationBusy}>
+              {rotationBusy ? "Bezig..." : "Rotatie opslaan"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              style={{ marginLeft: 8 }}
+              onClick={() => setRotationForm((f) => ({ ...f, orderText: teams.map((t) => t.name).join("\n") }))}
+            >
+              Vul aan met huidige teams
             </button>
           </form>
+
+          <details style={{ marginTop: 16 }}>
+            <summary className="hint" style={{ cursor: "pointer" }}>
+              Oude handmatige rooster-regels ({roster.length}) — niet meer nodig, alleen ter referentie
+            </summary>
+            <div style={{ marginTop: 10 }}>
+              {roster.slice(0, 10).map((r) => (
+                <div className="published-row" key={r.id}>
+                  <span style={{ fontSize: 14 }}>
+                    {fmtDateStr(r.date)} — <strong>{r.who}</strong>
+                  </span>
+                  <button
+                    onClick={() => deleteRosterEntry(r.id)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+              {roster.length > 10 && <p className="hint">... en nog {roster.length - 10} meer.</p>}
+            </div>
+          </details>
 
           <div className="section-title" style={{ marginTop: 32 }}>
             <MessageSquarePlus size={18} /> Verbeterpunten van leden ({feedback.length})

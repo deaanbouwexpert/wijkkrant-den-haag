@@ -5,6 +5,7 @@ import { Eye, Send, Lock, Archive, CalendarDays, ChevronDown, Users, MessageSqua
 import { useLang } from "./LangProvider";
 import { useSettings } from "./SettingsProvider";
 import { t, MONTHS } from "../lib/i18n";
+import { upcomingTeamWeeks } from "../lib/rotation";
 
 function fmtDateStrLang(dateStr, lang) {
   // "YYYY-MM-DD" handmatig opsplitsen i.p.v. via new Date(), zodat er nooit een
@@ -24,7 +25,7 @@ export default function Shell({ children, active }) {
   const [agendaPos, setAgendaPos] = useState({ top: 0, left: 0 });
   const agendaRef = useRef(null);
   const [rosterOpen, setRosterOpen] = useState(false);
-  const [roster, setRoster] = useState([]);
+  const [rotation, setRotation] = useState(null);
   const [rosterPos, setRosterPos] = useState({ top: 0, left: 0 });
   const rosterRef = useRef(null);
   const [teams, setTeams] = useState([]);
@@ -45,9 +46,9 @@ export default function Shell({ children, active }) {
       .then((r) => r.json())
       .then((d) => setAgendaDates(d.dates || []))
       .catch(() => {});
-    fetch("/api/roster")
+    fetch("/api/rotation")
       .then((r) => r.json())
-      .then((d) => setRoster(d.roster || []))
+      .then((d) => setRotation(d.rotation || null))
       .catch(() => {});
     fetch("/api/teams")
       .then((r) => r.json())
@@ -57,16 +58,9 @@ export default function Shell({ children, active }) {
 
   const teamMembers = (name) => teams.find((t) => t.name === name)?.members || [];
 
-  // In plaats van alle 53 weken van het jaar te tonen (veel te druk voor een
-  // dropdown), laten we alleen zien wie er NU aan de beurt is en wie daarna komt.
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const sortedRoster = [...roster].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  const upcomingRoster = sortedRoster.filter((r) => r.date >= todayStr);
-  const pastRoster = sortedRoster.filter((r) => r.date < todayStr);
-  const relevantRoster = [
-    ...(pastRoster.length > 0 ? [pastRoster[pastRoster.length - 1]] : []),
-    ...upcomingRoster.slice(0, 2),
-  ].slice(0, 3);
+  // Automatisch berekend (geen handmatige rooster-invoer meer nodig): het team
+  // van deze week + de eerstvolgende 2 weken.
+  const relevantRoster = upcomingTeamWeeks(rotation, 3);
 
   // Zodra een andere taal dan Nederlands gekozen wordt: vertaal (en cache) elk
   // agenda-item en elke roosterregel dat nog geen vertaling in die taal heeft.
@@ -87,23 +81,8 @@ export default function Shell({ children, active }) {
         })
         .catch(() => {});
     });
-    roster.forEach((r) => {
-      if (r.translations?.[lang]) return;
-      fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "roster", id: r.id, targetLang: lang }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setRoster((prev) =>
-            prev.map((x) => (x.id === r.id ? { ...x, translations: { ...(x.translations || {}), [lang]: data } } : x))
-          );
-        })
-        .catch(() => {});
-    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang, agendaDates.length, roster.length]);
+  }, [lang, agendaDates.length]);
 
   // Dropdown sluiten als je ergens anders klikt, of het venster van grootte
   // verandert (dan klopt de berekende positie niet meer). Scrollen doen we hier
@@ -303,7 +282,7 @@ export default function Shell({ children, active }) {
               )}
             </div>
           )}
-          {roster.length > 0 && (
+          {rotation && (
             <div className="nav-dropdown-wrap" ref={rosterRef}>
               <button
                 type="button"
@@ -319,22 +298,19 @@ export default function Shell({ children, active }) {
                   style={{ position: "fixed", top: rosterPos.top, left: rosterPos.left, transform: "translateX(-50%)" }}
                 >
                   {relevantRoster.map((r, i) => {
-                    const tr = lang !== "nl" ? r.translations?.[lang] : null;
                     const members = teamMembers(r.who);
-                    const isExpanded = expandedTeam === r.id;
+                    const isExpanded = expandedTeam === r.date;
                     return (
-                      <div className="nav-dropdown-item" key={r.id}>
-                        {i === 0 && pastRoster.length > 0 && (
-                          <span className="roster-now-badge">{t(lang, "rosterNowLabel")}</span>
-                        )}
+                      <div className="nav-dropdown-item" key={r.date}>
+                        {i === 0 && <span className="roster-now-badge">{t(lang, "rosterNowLabel")}</span>}
                         <button
                           type="button"
                           className="nav-dropdown-item-row roster-row-btn"
-                          onClick={() => members.length > 0 && setExpandedTeam(isExpanded ? null : r.id)}
+                          onClick={() => members.length > 0 && setExpandedTeam(isExpanded ? null : r.date)}
                         >
                           <span className="roster-date">{fmtDateStrLang(r.date, lang)}</span>
                           <span className="roster-who">
-                            {tr?.who || r.who}
+                            {r.who || "—"}
                             {members.length > 0 && (
                               <ChevronDown size={12} style={{ transform: isExpanded ? "rotate(180deg)" : "none" }} />
                             )}
