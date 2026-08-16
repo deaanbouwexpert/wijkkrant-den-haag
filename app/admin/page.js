@@ -83,6 +83,7 @@ export default function AdminPage() {
   const [roster, setRosterList] = useState([]);
   const [rosterForm, setRosterForm] = useState({ date: "", who: "" });
   const [rosterBusy, setRosterBusy] = useState(false);
+  const [showPastRoster, setShowPastRoster] = useState(false);
   const [teams, setTeamsList] = useState([]);
   const [teamForm, setTeamForm] = useState({ name: "", membersText: "" });
   const [teamBusy, setTeamBusy] = useState(false);
@@ -1042,20 +1043,52 @@ export default function AdminPage() {
           <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
             Welk team welke week aan de beurt is. Verschijnt ook boven in de wijkkrant.
           </p>
-          {roster.length === 0 && <p className="hint">Nog niemand ingedeeld.</p>}
-          {roster.map((r) => (
-            <div className="published-row" key={r.id}>
-              <span style={{ fontSize: 14 }}>
-                {fmtDateStr(r.date)} — <strong>{r.who}</strong>
-              </span>
-              <button
-                onClick={() => deleteRosterEntry(r.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
-              >
-                <Trash2 size={15} />
-              </button>
-            </div>
-          ))}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const sorted = [...roster].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+            const upcoming = sorted.filter((r) => r.date >= todayStr);
+            const past = sorted.filter((r) => r.date < todayStr).reverse();
+            const shown = showPastRoster ? [...past].reverse().concat(upcoming) : upcoming;
+            return (
+              <>
+                {roster.length === 0 && <p className="hint">Nog niemand ingedeeld.</p>}
+                {roster.length > 0 && shown.length === 0 && (
+                  <p className="hint">Geen aankomende weken meer ingepland.</p>
+                )}
+                {shown.map((r, i) => {
+                  const isCurrent = !showPastRoster ? i === 0 : r.date >= todayStr && upcoming[0]?.id === r.id;
+                  return (
+                    <div className="published-row" key={r.id}>
+                      <span style={{ fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                        {isCurrent && (
+                          <span className="roster-now-badge" style={{ marginBottom: 0 }}>
+                            NU
+                          </span>
+                        )}
+                        {fmtDateStr(r.date)} — <strong>{r.who}</strong>
+                      </span>
+                      <button
+                        onClick={() => deleteRosterEntry(r.id)}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)" }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  );
+                })}
+                {past.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline"
+                    style={{ marginTop: 8 }}
+                    onClick={() => setShowPastRoster((v) => !v)}
+                  >
+                    {showPastRoster ? "Verberg voorbije weken" : `Toon ${past.length} voorbije week(en)`}
+                  </button>
+                )}
+              </>
+            );
+          })()}
           <form className="admin-post" onSubmit={addRosterEntry} style={{ marginTop: 12 }}>
             <label className="field-label">Datum (van die week)</label>
             <input
