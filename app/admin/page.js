@@ -4,7 +4,7 @@ import Shell from "../../components/Shell";
 import { useSettings, DEFAULTS } from "../../components/SettingsProvider";
 import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
-import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText, MessageSquarePlus } from "lucide-react";
+import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText, MessageSquarePlus, Download } from "lucide-react";
 
 const MAX_IMAGES = 6;
 
@@ -402,6 +402,26 @@ export default function AdminPage() {
     setPdfPostBusy(false);
   };
 
+  const downloadBackup = async () => {
+    const res = await fetch("/api/admin/backup", { headers: { "x-admin-password": pw } });
+    if (!res.ok) {
+      showToast("Back-up maken is niet gelukt.");
+      return;
+    }
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `wijkkrant-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast("Back-up gedownload.");
+  };
+
   const saveSettings = async (updates, { silent = false } = {}) => {
     if (!silent) setSettingsBusy(true);
     const res = await fetch("/api/settings", {
@@ -543,6 +563,11 @@ export default function AdminPage() {
         </div>
       ) : (
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <button type="button" className="btn btn-sm btn-outline" onClick={downloadBackup}>
+              <Download size={13} /> Back-up downloaden
+            </button>
+          </div>
           <div className="section-title">
             <Clock size={18} /> Wacht op goedkeuring ({pending.length})
           </div>
