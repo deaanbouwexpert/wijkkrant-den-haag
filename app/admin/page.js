@@ -5,7 +5,11 @@ import { useSettings, DEFAULTS } from "../../components/SettingsProvider";
 import { CATEGORIES, catInfo } from "../../lib/categories";
 import { ORGANIZATIONS, orgInfo } from "../../lib/organizations";
 import { upcomingTeamWeeks } from "../../lib/rotation";
+import { useLang } from "../../components/LangProvider";
+import { at } from "../../lib/admin-i18n";
 import { Lock, Clock, Check, Pencil, Trash2, BookOpen, UploadCloud, ImagePlus, Palette, X, FileText, MessageSquarePlus, Download, Users } from "lucide-react";
+
+import { MONTHS as MONTHS_BY_LANG } from "../../lib/i18n";
 
 const MAX_IMAGES = 6;
 
@@ -40,21 +44,24 @@ const MONTHS = [
   "juli", "augustus", "september", "oktober", "november", "december",
 ];
 
-function fmtDate(iso) {
+function fmtDate(iso, lang = "nl") {
   const d = new Date(iso);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const months = MONTHS_BY_LANG[lang] || MONTHS;
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function fmtDateStr(dateStr) {
+function fmtDateStr(dateStr, lang = "nl") {
   // Voor "YYYY-MM-DD"-strings uit een <input type="date">: handmatig opsplitsen
   // i.p.v. via new Date(), zodat er nooit een tijdzone-verschuiving kan optreden.
   if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-").map(Number);
   if (!y || !m || !d) return dateStr;
-  return `${d} ${MONTHS[m - 1]} ${y}`;
+  const months = MONTHS_BY_LANG[lang] || MONTHS;
+  return `${d} ${months[m - 1]} ${y}`;
 }
 
 export default function AdminPage() {
+  const [lang] = useLang();
   const [pw, setPw] = useState("");
   const [authed, setAuthed] = useState(false);
   const [pwErr, setPwErr] = useState("");
@@ -133,7 +140,7 @@ export default function AdminPage() {
       loadTeams();
       loadRotation();
     } else {
-      setPwErr("Onjuist wachtwoord.");
+      setPwErr(at(lang, "Onjuist wachtwoord."));
       sessionStorage.removeItem("wk_admin_pw");
     }
     setLoading(false);
@@ -160,9 +167,9 @@ export default function AdminPage() {
       body: JSON.stringify({ id, updates: { status: "published" } }),
     });
     if (res.ok) {
-      showToast("Geplaatst in de wijkkrant.");
+      showToast(at(lang, "Geplaatst in de wijkkrant."));
     } else {
-      showToast("Plaatsen is niet gelukt — probeer het nog eens.");
+      showToast(at(lang, "Plaatsen is niet gelukt — probeer het nog eens."));
     }
     reload();
   };
@@ -174,9 +181,9 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     if (res.ok) {
-      showToast("Bijdrage afgewezen.");
+      showToast(at(lang, "Bijdrage afgewezen."));
     } else {
-      showToast("Afwijzen is niet gelukt — probeer het nog eens.");
+      showToast(at(lang, "Afwijzen is niet gelukt — probeer het nog eens."));
     }
     reload();
   };
@@ -188,9 +195,9 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     if (res.ok) {
-      showToast("Verwijderd uit de wijkkrant.");
+      showToast(at(lang, "Verwijderd uit de wijkkrant."));
     } else {
-      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+      showToast(at(lang, "Verwijderen is niet gelukt — probeer het nog eens."));
     }
     reload();
   };
@@ -207,7 +214,7 @@ export default function AdminPage() {
     const f = e.target.files?.[0];
     if (!f) return;
     if (f.type !== "application/pdf") {
-      showToast("Alleen PDF-bestanden zijn toegestaan.");
+      showToast(at(lang, "Alleen PDF-bestanden zijn toegestaan."));
       return;
     }
     setArchiveFile(f);
@@ -216,7 +223,7 @@ export default function AdminPage() {
   const uploadArchive = async (e) => {
     e.preventDefault();
     if (!archiveFile) {
-      showToast("Kies eerst een PDF-bestand.");
+      showToast(at(lang, "Kies eerst een PDF-bestand."));
       return;
     }
     setArchiveBusy(true);
@@ -229,7 +236,7 @@ export default function AdminPage() {
       });
       if (!initRes.ok) {
         const d = await initRes.json().catch(() => ({}));
-        throw new Error(d.error || "Kon geen upload-link aanmaken.");
+        throw new Error(d.error || at(lang, "Kon geen upload-link aanmaken."));
       }
       const { signedUrl, publicUrl } = await initRes.json();
 
@@ -239,7 +246,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/pdf" },
         body: archiveFile,
       });
-      if (!putRes.ok) throw new Error("Uploaden naar de opslag is niet gelukt.");
+      if (!putRes.ok) throw new Error(at(lang, "Uploaden naar de opslag is niet gelukt."));
 
       // Stap 3: bewaar de titel/maand/jaar erbij.
       const confirmRes = await fetch("/api/archive", {
@@ -249,15 +256,15 @@ export default function AdminPage() {
       });
       if (!confirmRes.ok) {
         const d = await confirmRes.json().catch(() => ({}));
-        throw new Error(d.error || "Opslaan van de gegevens is niet gelukt.");
+        throw new Error(d.error || at(lang, "Opslaan van de gegevens is niet gelukt."));
       }
 
-      showToast("Oude editie toegevoegd aan het archief.");
+      showToast(at(lang, "Oude editie toegevoegd aan het archief."));
       setArchiveForm({ title: "", year: new Date().getFullYear(), month: 1, lang: "nl" });
       setArchiveFile(null);
       loadArchive();
     } catch (err) {
-      showToast(err.message || "Uploaden is niet gelukt.");
+      showToast(err.message || at(lang, "Uploaden is niet gelukt."));
     }
     setArchiveBusy(false);
   };
@@ -271,7 +278,7 @@ export default function AdminPage() {
     if (res.ok) {
       showToast("Verwijderd uit het archief.");
     } else {
-      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+      showToast(at(lang, "Verwijderen is niet gelukt — probeer het nog eens."));
     }
     loadArchive();
   };
@@ -287,7 +294,7 @@ export default function AdminPage() {
   const addAgendaDate = async (e) => {
     e.preventDefault();
     if (!agendaForm.title.trim() || !agendaForm.when.trim()) {
-      showToast("Vul een titel en 'wanneer' in.");
+      showToast(at(lang, "Vul een titel en 'wanneer' in."));
       return;
     }
     setAgendaBusy(true);
@@ -297,11 +304,11 @@ export default function AdminPage() {
       body: JSON.stringify(agendaForm),
     });
     if (res.ok) {
-      showToast("Toegevoegd aan de belangrijke data.");
+      showToast(at(lang, "Toegevoegd aan de belangrijke data."));
       setAgendaForm({ title: "", when: "", note: "" });
       loadAgenda();
     } else {
-      showToast("Toevoegen is niet gelukt.");
+      showToast(at(lang, "Toevoegen is niet gelukt."));
     }
     setAgendaBusy(false);
   };
@@ -313,9 +320,9 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     if (res.ok) {
-      showToast("Verwijderd.");
+      showToast(at(lang, "Verwijderd."));
     } else {
-      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+      showToast(at(lang, "Verwijderen is niet gelukt — probeer het nog eens."));
     }
     loadAgenda();
   };
@@ -349,7 +356,7 @@ export default function AdminPage() {
       .map((s) => s.trim())
       .filter(Boolean);
     if (!rotationForm.anchorDate || order.length === 0) {
-      showToast("Vul een startdatum en minstens één team in.");
+      showToast(at(lang, "Vul een startdatum en minstens één team in."));
       return;
     }
     setRotationBusy(true);
@@ -359,11 +366,11 @@ export default function AdminPage() {
       body: JSON.stringify({ anchorDate: rotationForm.anchorDate, order }),
     });
     if (res.ok) {
-      showToast("Rotatie opgeslagen.");
+      showToast(at(lang, "Rotatie opgeslagen."));
       loadRotation();
     } else {
       const d = await res.json().catch(() => ({}));
-      showToast(d.error || "Opslaan is niet gelukt.");
+      showToast(d.error || at(lang, "Opslaan is niet gelukt."));
     }
     setRotationBusy(false);
   };
@@ -375,9 +382,9 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     if (res.ok) {
-      showToast("Verwijderd.");
+      showToast(at(lang, "Verwijderd."));
     } else {
-      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+      showToast(at(lang, "Verwijderen is niet gelukt — probeer het nog eens."));
     }
     loadRoster();
   };
@@ -403,7 +410,7 @@ export default function AdminPage() {
   const saveTeam = async (e) => {
     e.preventDefault();
     if (!teamForm.name.trim()) {
-      showToast("Vul een teamnaam in.");
+      showToast(at(lang, "Vul een teamnaam in."));
       return;
     }
     setTeamBusy(true);
@@ -417,12 +424,12 @@ export default function AdminPage() {
       body: JSON.stringify({ id: editingTeamId, name: teamForm.name, members }),
     });
     if (res.ok) {
-      showToast(editingTeamId ? "Team bijgewerkt." : "Team toegevoegd.");
+      showToast(editingTeamId ? at(lang, "Team bijgewerkt.") : at(lang, "Team toegevoegd."));
       cancelEditTeam();
       loadTeams();
     } else {
       const d = await res.json().catch(() => ({}));
-      showToast(d.error || "Opslaan is niet gelukt.");
+      showToast(d.error || at(lang, "Opslaan is niet gelukt."));
     }
     setTeamBusy(false);
   };
@@ -434,9 +441,9 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     if (res.ok) {
-      showToast("Team verwijderd.");
+      showToast(at(lang, "Team verwijderd."));
     } else {
-      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+      showToast(at(lang, "Verwijderen is niet gelukt — probeer het nog eens."));
     }
     loadTeams();
   };
@@ -456,9 +463,9 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     if (res.ok) {
-      showToast("Verwijderd.");
+      showToast(at(lang, "Verwijderd."));
     } else {
-      showToast("Verwijderen is niet gelukt — probeer het nog eens.");
+      showToast(at(lang, "Verwijderen is niet gelukt — probeer het nog eens."));
     }
     loadFeedback();
   };
@@ -467,7 +474,7 @@ export default function AdminPage() {
     const f = e.target.files?.[0];
     if (!f) return;
     if (f.type !== "application/pdf") {
-      showToast("Alleen PDF-bestanden zijn toegestaan.");
+      showToast(at(lang, "Alleen PDF-bestanden zijn toegestaan."));
       return;
     }
     setPdfPostFile(f);
@@ -476,11 +483,11 @@ export default function AdminPage() {
   const submitPdfPost = async (e) => {
     e.preventDefault();
     if (!pdfPostFile) {
-      showToast("Kies eerst een PDF-bestand.");
+      showToast(at(lang, "Kies eerst een PDF-bestand."));
       return;
     }
     if (!pdfPostForm.text.trim()) {
-      showToast("Schrijf er ook een stukje tekst bij.");
+      showToast(at(lang, "Schrijf er ook een stukje tekst bij."));
       return;
     }
     setPdfPostBusy(true);
@@ -492,7 +499,7 @@ export default function AdminPage() {
       });
       if (!initRes.ok) {
         const d = await initRes.json().catch(() => ({}));
-        throw new Error(d.error || "Kon geen upload-link aanmaken.");
+        throw new Error(d.error || at(lang, "Kon geen upload-link aanmaken."));
       }
       const { signedUrl, publicUrl } = await initRes.json();
 
@@ -502,7 +509,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/pdf" },
         body: pdfPostFile,
       });
-      if (!putRes.ok) throw new Error("Uploaden naar de opslag is niet gelukt.");
+      if (!putRes.ok) throw new Error(at(lang, "Uploaden naar de opslag is niet gelukt."));
 
       // Stap 3: maak het bericht aan — dit verschijnt direct in de wijkkrant.
       const confirmRes = await fetch("/api/admin", {
@@ -512,15 +519,15 @@ export default function AdminPage() {
       });
       if (!confirmRes.ok) {
         const d = await confirmRes.json().catch(() => ({}));
-        throw new Error(d.error || "Plaatsen is niet gelukt.");
+        throw new Error(d.error || at(lang, "Plaatsen is niet gelukt."));
       }
 
-      showToast("Aankondiging met PDF geplaatst in de wijkkrant.");
+      showToast(at(lang, "Aankondiging met PDF geplaatst in de wijkkrant."));
       setPdfPostForm({ category: "agenda", org: "", title: "", text: "", pdfName: "" });
       setPdfPostFile(null);
       reload();
     } catch (err) {
-      showToast(err.message || "Plaatsen is niet gelukt.");
+      showToast(err.message || at(lang, "Plaatsen is niet gelukt."));
     }
     setPdfPostBusy(false);
   };
@@ -528,7 +535,7 @@ export default function AdminPage() {
   const downloadBackup = async () => {
     const res = await fetch("/api/admin/backup", { headers: { "x-admin-password": pw } });
     if (!res.ok) {
-      showToast("Back-up maken is niet gelukt.");
+      showToast(at(lang, "Back-up maken is niet gelukt."));
       return;
     }
     const data = await res.json();
@@ -542,7 +549,7 @@ export default function AdminPage() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    showToast("Back-up gedownload.");
+    showToast(at(lang, "Back-up gedownload."));
   };
 
   const saveSettings = async (updates, { silent = false } = {}) => {
@@ -553,10 +560,10 @@ export default function AdminPage() {
       body: JSON.stringify(updates),
     });
     if (res.ok) {
-      if (!silent) showToast("Uiterlijk opgeslagen.");
+      if (!silent) showToast(at(lang, "Uiterlijk opgeslagen."));
       refreshSettings();
     } else if (!silent) {
-      showToast("Opslaan van het uiterlijk is niet gelukt.");
+      showToast(at(lang, "Opslaan van het uiterlijk is niet gelukt."));
     }
     if (!silent) setSettingsBusy(false);
   };
@@ -596,7 +603,7 @@ export default function AdminPage() {
       const urls = upData.urls || [];
       await saveSettings({ headerImages: [...(settings.headerImages || []), ...urls] });
     } catch {
-      showToast("Foto('s) uploaden is niet gelukt.");
+      showToast(at(lang, "Foto('s) uploaden is niet gelukt."));
       setSettingsBusy(false);
     }
   };
@@ -618,7 +625,7 @@ export default function AdminPage() {
       const upData = await up.json();
       await saveSettings({ pageBackgroundImage: upData.urls?.[0] || null });
     } catch {
-      showToast("Achtergrondfoto uploaden is niet gelukt.");
+      showToast(at(lang, "Achtergrondfoto uploaden is niet gelukt."));
       setSettingsBusy(false);
     }
   };
@@ -648,7 +655,7 @@ export default function AdminPage() {
       const urls = upData.urls || [];
       setDraft((d) => ({ ...d, images: [...(d.images || []), ...urls] }));
     } catch {
-      showToast("Foto('s) toevoegen is niet gelukt.");
+      showToast(at(lang, "Foto('s) toevoegen is niet gelukt."));
     }
     setEditImagesBusy(false);
   };
@@ -662,10 +669,10 @@ export default function AdminPage() {
     if (res.ok) {
       setEditingId(null);
       setDraft(null);
-      showToast("Wijzigingen opgeslagen.");
+      showToast(at(lang, "Wijzigingen opgeslagen."));
     } else {
       const d = await res.json().catch(() => ({}));
-      showToast(d.error || "Opslaan is niet gelukt — je wijzigingen staan nog open, probeer het nog eens.");
+      showToast(d.error || at(lang, "Opslaan is niet gelukt — je wijzigingen staan nog open, probeer het nog eens."));
     }
     reload();
   };
@@ -683,13 +690,13 @@ export default function AdminPage() {
       {!authed ? (
         <div className="panel" style={{ textAlign: "center" }}>
           <Lock size={26} style={{ color: "#2f4a42", marginBottom: 8 }} />
-          <h2>Redactie</h2>
-          <p className="sub">Alleen voor de wijkkrantredacteur.</p>
+          <h2>{at(lang, "Redactie")}</h2>
+          <p className="sub">{at(lang, "Alleen voor de wijkkrantredacteur.")}</p>
           <form onSubmit={login}>
-            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Wachtwoord" />
+            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder={at(lang, "Wachtwoord")} />
             {pwErr && <p className="error-text">{pwErr}</p>}
             <button className="btn btn-full" disabled={loading}>
-              {loading ? "Bezig..." : "Inloggen"}
+              {loading ? at(lang, "Bezig...") : at(lang, "Inloggen")}
             </button>
           </form>
         </div>
@@ -697,13 +704,13 @@ export default function AdminPage() {
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
             <button type="button" className="btn btn-sm btn-outline" onClick={downloadBackup}>
-              <Download size={13} /> Back-up downloaden
+              <Download size={13} /> {at(lang, "Back-up downloaden")}
             </button>
           </div>
           <div className="section-title">
-            <Clock size={18} /> Wacht op goedkeuring ({pending.length})
+            <Clock size={18} /> {at(lang, "Wacht op goedkeuring")} ({pending.length})
           </div>
-          {pending.length === 0 && <p className="hint">Niets om te beoordelen — mooi rustig.</p>}
+          {pending.length === 0 && <p className="hint">{at(lang, "Niets om te beoordelen — mooi rustig.")}</p>}
           {pending.map((p) => (
             <div className="admin-post" key={p.id}>
               {editingId === p.id ? (
@@ -720,7 +727,7 @@ export default function AdminPage() {
                     ))}
                   </select>
                   <select value={draft.org} onChange={(e) => setDraft((d) => ({ ...d, org: e.target.value }))}>
-                    <option value="">Geen vereniging</option>
+                    <option value="">{at(lang, "Geen vereniging")}</option>
                     {ORGANIZATIONS.map((o) => (
                       <option key={o.id} value={o.id}>
                         {o.label}
@@ -734,7 +741,7 @@ export default function AdminPage() {
                     onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))}
                   />
                   <label className="field-label" style={{ marginTop: 4 }}>
-                    Foto's ({(draft.images || []).length}/{MAX_IMAGES})
+                    {at(lang, "Foto's")} ({(draft.images || []).length}/{MAX_IMAGES})
                   </label>
                   <div className="admin-thumbs" style={{ marginBottom: 10 }}>
                     {(draft.images || []).map((src, i) => (
@@ -770,7 +777,7 @@ export default function AdminPage() {
                         disabled={editImagesBusy}
                       >
                         <ImagePlus size={16} />
-                        {editImagesBusy ? "Bezig..." : "Toevoegen"}
+                        {editImagesBusy ? at(lang, "Bezig...") : at(lang, "Toevoegen")}
                       </button>
                     )}
                   </div>
@@ -784,10 +791,10 @@ export default function AdminPage() {
                   />
                   <div className="admin-actions">
                     <button className="btn btn-sm" onClick={saveEdit}>
-                      Opslaan
+                      {at(lang, "Opslaan")}
                     </button>
                     <button className="btn btn-sm btn-outline" onClick={() => setEditingId(null)}>
-                      Annuleren
+                      {at(lang, "Annuleren")}
                     </button>
                   </div>
                 </>
@@ -797,8 +804,8 @@ export default function AdminPage() {
                     {catInfo(p.category).label}
                   </span>
                   <p className="hint">
-                    {p.name} • {orgInfo(p.org)?.label || "Geen vereniging"} • {fmtDate(p.createdAt)}
-                    {p.aiPolished ? " • spelling gecontroleerd door AI" : ""}
+                    {p.name} • {orgInfo(p.org)?.label || at(lang, "Geen vereniging")} • {fmtDate(p.createdAt, lang)}
+                    {p.aiPolished ? at(lang, " • spelling gecontroleerd door AI") : ""}
                   </p>
                   {p.images?.length > 0 && (
                     <div className="admin-thumbs">
@@ -809,20 +816,20 @@ export default function AdminPage() {
                   )}
                   {p.pdfUrl && (
                     <a href={p.pdfUrl} target="_blank" rel="noreferrer" className="card-pdf-link" style={{ marginBottom: 8 }}>
-                      <FileText size={14} /> {p.pdfName || "Bekijk PDF-bijlage"}
+                      <FileText size={14} /> {p.pdfName || at(lang, "Bekijk PDF-bijlage")}
                     </a>
                   )}
                   {p.title && <p style={{ fontWeight: 600, margin: "8px 0 2px" }}>{p.title}</p>}
                   <p style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{p.text}</p>
                   <div className="admin-actions">
                     <button className="btn btn-sm btn-green" onClick={() => approve(p.id)}>
-                      <Check size={13} /> Plaatsen
+                      <Check size={13} /> {at(lang, "Plaatsen")}
                     </button>
                     <button className="btn btn-sm btn-outline" onClick={() => startEdit(p)}>
-                      <Pencil size={13} /> Bewerken
+                      <Pencil size={13} /> {at(lang, "Bewerken")}
                     </button>
                     <button className="btn btn-sm btn-red" onClick={() => reject(p.id)}>
-                      <Trash2 size={13} /> Afwijzen
+                      <Trash2 size={13} /> {at(lang, "Afwijzen")}
                     </button>
                   </div>
                 </>
@@ -831,12 +838,12 @@ export default function AdminPage() {
           ))}
 
           <div className="section-title" style={{ marginTop: 32 }}>
-            <Clock size={18} /> Belangrijke data (wijkagenda)
+            <Clock size={18} /> {at(lang, "Belangrijke data (wijkagenda)")}
           </div>
           <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Terugkerende afspraken zoals de potluck of tempelavond. Deze verschijnen boven in de wijkkrant.
+            {at(lang, "Terugkerende afspraken zoals de potluck of tempelavond. Deze verschijnen boven in de wijkkrant.")}
           </p>
-          {agendaDates.length === 0 && <p className="hint">Nog geen data toegevoegd.</p>}
+          {agendaDates.length === 0 && <p className="hint">{at(lang, "Nog geen data toegevoegd.")}</p>}
           {agendaDates.map((d) => (
             <div className="published-row" key={d.id}>
               <span style={{ minWidth: 0 }}>
@@ -855,45 +862,43 @@ export default function AdminPage() {
             </div>
           ))}
           <form className="admin-post" onSubmit={addAgendaDate} style={{ marginTop: 12 }}>
-            <label className="field-label">Titel</label>
+            <label className="field-label">{at(lang, "Titel")}</label>
             <input
               value={agendaForm.title}
               onChange={(e) => setAgendaForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="Bijv. Potluck eten"
+              placeholder={at(lang, "Bijv. Potluck eten")}
             />
-            <label className="field-label">Wanneer</label>
+            <label className="field-label">{at(lang, "Wanneer")}</label>
             <input
               value={agendaForm.when}
               onChange={(e) => setAgendaForm((f) => ({ ...f, when: e.target.value }))}
-              placeholder="Bijv. Elke 5e zondag van de maand, 12:00"
+              placeholder={at(lang, "Bijv. Elke 5e zondag van de maand, 12:00")}
             />
-            <label className="field-label">Notitie (optioneel)</label>
+            <label className="field-label">{at(lang, "Notitie (optioneel)")}</label>
             <input
               value={agendaForm.note}
               onChange={(e) => setAgendaForm((f) => ({ ...f, note: e.target.value }))}
-              placeholder="Bijv. Neem iets lekkers mee om te delen"
+              placeholder={at(lang, "Bijv. Neem iets lekkers mee om te delen")}
               style={{ marginBottom: 16 }}
             />
             <button className="btn btn-sm" disabled={agendaBusy}>
-              {agendaBusy ? "Bezig..." : "Toevoegen"}
+              {agendaBusy ? at(lang, "Bezig...") : at(lang, "Toevoegen")}
             </button>
           </form>
 
           <div className="section-title" style={{ marginTop: 32 }}>
-            <Users size={18} /> Schoonmaak-teams
+            <Users size={18} /> {at(lang, "Schoonmaak-teams")}
           </div>
           <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Maak hier elk team aan met de bijbehorende leden. In het schoonmaakrooster hieronder kies je per week
-            welk team aan de beurt is — op de wijkkrant zie je dan alleen "Team X", met een tikje om de namen te
-            onthullen.
+            {at(lang, "Maak hier elk team aan met de bijbehorende leden. In het schoonmaakrooster hieronder kies je per week welk team aan de beurt is — op de wijkkrant zie je dan alleen \"Team X\", met een tikje om de namen te onthullen.")}
           </p>
-          {teams.length === 0 && <p className="hint">Nog geen teams aangemaakt.</p>}
+          {teams.length === 0 && <p className="hint">{at(lang, "Nog geen teams aangemaakt.")}</p>}
           {teams.map((t) => (
             <div className="published-row" key={t.id} style={{ alignItems: "flex-start" }}>
               <span style={{ minWidth: 0 }}>
                 <strong style={{ fontSize: 14 }}>{t.name}</strong>
                 <span className="hint" style={{ display: "block" }}>
-                  {(t.members || []).length} leden: {(t.members || []).join(", ") || "—"}
+                  {(t.members || []).length} {at(lang, "leden")}: {(t.members || []).join(", ") || "—"}
                 </span>
               </span>
               <span style={{ display: "flex", gap: 4, flexShrink: 0 }}>
@@ -913,13 +918,13 @@ export default function AdminPage() {
             </div>
           ))}
           <form className="admin-post" onSubmit={saveTeam} style={{ marginTop: 12 }}>
-            <label className="field-label">Teamnaam</label>
+            <label className="field-label">{at(lang, "Teamnaam")}</label>
             <input
               value={teamForm.name}
               onChange={(e) => setTeamForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Bijv. Team 7"
+              placeholder={at(lang, "Bijv. Team 7")}
             />
-            <label className="field-label">Leden (één naam per regel)</label>
+            <label className="field-label">{at(lang, "Leden (één naam per regel)")}</label>
             <textarea
               rows={5}
               value={teamForm.membersText}
@@ -929,22 +934,21 @@ export default function AdminPage() {
             />
             <div className="admin-actions">
               <button className="btn btn-sm" disabled={teamBusy}>
-                {teamBusy ? "Bezig..." : editingTeamId ? "Team bijwerken" : "Team toevoegen"}
+                {teamBusy ? at(lang, "Bezig...") : editingTeamId ? at(lang, "Team bijwerken") : at(lang, "Team toevoegen")}
               </button>
               {editingTeamId && (
                 <button type="button" className="btn btn-sm btn-outline" onClick={cancelEditTeam}>
-                  Annuleren
+                  {at(lang, "Annuleren")}
                 </button>
               )}
             </div>
           </form>
 
           <div className="section-title" style={{ marginTop: 32 }}>
-            <Clock size={18} /> Schoonmaakrooster — automatisch
+            <Clock size={18} /> {at(lang, "Schoonmaakrooster — automatisch")}
           </div>
           <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Stel dit één keer in: een startdatum (een maandag) en de volgorde van teams. Daarna rekent de wijkkrant
-            zelf, voor altijd, uit welk team welke week aan de beurt is — nooit meer handmatig invullen.
+            {at(lang, "Stel dit één keer in: een startdatum (een maandag) en de volgorde van teams. Daarna rekent de wijkkrant zelf, voor altijd, uit welk team welke week aan de beurt is — nooit meer handmatig invullen.")}
           </p>
           {rotation && rotationPreview.length > 0 && (
             <div style={{ marginBottom: 16 }}>
@@ -953,23 +957,23 @@ export default function AdminPage() {
                   <span style={{ fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
                     {i === 0 && (
                       <span className="roster-now-badge" style={{ marginBottom: 0 }}>
-                        NU
+                        {at(lang, "NU")}
                       </span>
                     )}
-                    {fmtDateStr(r.date)} — <strong>{r.who || "—"}</strong>
+                    {fmtDateStr(r.date, lang)} — <strong>{r.who || "—"}</strong>
                   </span>
                 </div>
               ))}
             </div>
           )}
           <form className="admin-post" onSubmit={saveRotation}>
-            <label className="field-label">Startdatum (een maandag, hoort bij het 1e team hieronder)</label>
+            <label className="field-label">{at(lang, "Startdatum (een maandag, hoort bij het 1e team hieronder)")}</label>
             <input
               type="date"
               value={rotationForm.anchorDate}
               onChange={(e) => setRotationForm((f) => ({ ...f, anchorDate: e.target.value }))}
             />
-            <label className="field-label">Volgorde van teams (één per regel, in de juiste rotatie-volgorde)</label>
+            <label className="field-label">{at(lang, "Volgorde van teams (één per regel, in de juiste rotatie-volgorde)")}</label>
             <textarea
               rows={8}
               value={rotationForm.orderText}
@@ -978,7 +982,7 @@ export default function AdminPage() {
               style={{ marginBottom: 12 }}
             />
             <button className="btn btn-sm" disabled={rotationBusy}>
-              {rotationBusy ? "Bezig..." : "Rotatie opslaan"}
+              {rotationBusy ? at(lang, "Bezig...") : at(lang, "Rotatie opslaan")}
             </button>
             <button
               type="button"
@@ -986,19 +990,19 @@ export default function AdminPage() {
               style={{ marginLeft: 8 }}
               onClick={() => setRotationForm((f) => ({ ...f, orderText: teams.map((t) => t.name).join("\n") }))}
             >
-              Vul aan met huidige teams
+              {at(lang, "Vul aan met huidige teams")}
             </button>
           </form>
 
           <details style={{ marginTop: 16 }}>
             <summary className="hint" style={{ cursor: "pointer" }}>
-              Oude handmatige rooster-regels ({roster.length}) — niet meer nodig, alleen ter referentie
+              {at(lang, "Oude handmatige rooster-regels")} ({roster.length}) — {at(lang, "niet meer nodig, alleen ter referentie")}
             </summary>
             <div style={{ marginTop: 10 }}>
               {roster.slice(0, 10).map((r) => (
                 <div className="published-row" key={r.id}>
                   <span style={{ fontSize: 14 }}>
-                    {fmtDateStr(r.date)} — <strong>{r.who}</strong>
+                    {fmtDateStr(r.date, lang)} — <strong>{r.who}</strong>
                   </span>
                   <button
                     onClick={() => deleteRosterEntry(r.id)}
@@ -1008,29 +1012,28 @@ export default function AdminPage() {
                   </button>
                 </div>
               ))}
-              {roster.length > 10 && <p className="hint">... en nog {roster.length - 10} meer.</p>}
+              {roster.length > 10 && <p className="hint">{at(lang, "... en nog {n} meer.").replace("{n}", roster.length - 10)}</p>}
             </div>
           </details>
 
           <div className="section-title" style={{ marginTop: 32 }}>
-            <MessageSquarePlus size={18} /> Verbeterpunten van leden ({feedback.length})
+            <MessageSquarePlus size={18} /> {at(lang, "Verbeterpunten van leden")} ({feedback.length})
           </div>
           <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Dit komt binnen via het zwevende knopje rechtsonder op de wijkkrant. Vink af (verwijder) zodra je 'm hebt
-            verwerkt.
+            {at(lang, "Dit komt binnen via het zwevende knopje rechtsonder op de wijkkrant. Vink af (verwijder) zodra je 'm hebt verwerkt.")}
           </p>
-          {feedback.length === 0 && <p className="hint">Nog geen verbeterpunten binnengekomen.</p>}
+          {feedback.length === 0 && <p className="hint">{at(lang, "Nog geen verbeterpunten binnengekomen.")}</p>}
           {feedback.map((f) => (
             <div className="published-row" key={f.id} style={{ alignItems: "flex-start" }}>
               <span style={{ minWidth: 0 }}>
                 <span style={{ fontSize: 14, display: "block" }}>{f.text}</span>
                 <span className="hint" style={{ display: "block" }}>
-                  {f.name || "Anoniem"} • {fmtDate(f.createdAt)}
+                  {f.name || at(lang, "Anoniem")} • {fmtDate(f.createdAt, lang)}
                 </span>
               </span>
               <button
                 onClick={() => deleteFeedback(f.id)}
-                title="Afvinken / verwijderen"
+                title={at(lang, "Afvinken / verwijderen")}
                 style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.3)", flexShrink: 0 }}
               >
                 <Check size={16} />
@@ -1039,9 +1042,9 @@ export default function AdminPage() {
           ))}
 
           <div className="section-title" style={{ marginTop: 32 }}>
-            Al geplaatst ({published.length})
+            {at(lang, "Al geplaatst")} ({published.length})
           </div>
-          {published.length === 0 && <p className="hint">Nog niets geplaatst.</p>}
+          {published.length === 0 && <p className="hint">{at(lang, "Nog niets geplaatst.")}</p>}
           {published.map((p) =>
             editingId === p.id ? (
               <div className="admin-post" key={p.id}>
@@ -1054,7 +1057,7 @@ export default function AdminPage() {
                   ))}
                 </select>
                 <select value={draft.org} onChange={(e) => setDraft((d) => ({ ...d, org: e.target.value }))}>
-                  <option value="">Geen vereniging</option>
+                  <option value="">{at(lang, "Geen vereniging")}</option>
                   {ORGANIZATIONS.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.label}
@@ -1064,7 +1067,7 @@ export default function AdminPage() {
                 <input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
                 <textarea rows={4} value={draft.text} onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))} />
                 <label className="field-label" style={{ marginTop: 4 }}>
-                  Foto's ({(draft.images || []).length}/{MAX_IMAGES})
+                  {at(lang, "Foto's")} ({(draft.images || []).length}/{MAX_IMAGES})
                 </label>
                 <div className="admin-thumbs" style={{ marginBottom: 10 }}>
                   {(draft.images || []).map((src, i) => (
@@ -1100,7 +1103,7 @@ export default function AdminPage() {
                       disabled={editImagesBusy}
                     >
                       <ImagePlus size={16} />
-                      {editImagesBusy ? "Bezig..." : "Toevoegen"}
+                      {editImagesBusy ? at(lang, "Bezig...") : at(lang, "Toevoegen")}
                     </button>
                   )}
                 </div>
@@ -1114,10 +1117,10 @@ export default function AdminPage() {
                 />
                 <div className="admin-actions">
                   <button className="btn btn-sm" onClick={saveEdit}>
-                    Opslaan
+                    {at(lang, "Opslaan")}
                   </button>
                   <button className="btn btn-sm btn-outline" onClick={() => setEditingId(null)}>
-                    Annuleren
+                    {at(lang, "Annuleren")}
                   </button>
                 </div>
               </div>
@@ -1149,14 +1152,13 @@ export default function AdminPage() {
             )
           )}
           <div className="section-title" style={{ marginTop: 32 }}>
-            <FileText size={18} /> Aankondiging met PDF plaatsen
+            <FileText size={18} /> {at(lang, "Aankondiging met PDF plaatsen")}
           </div>
           <p className="hint" style={{ marginTop: -6, marginBottom: 10 }}>
-            Handig voor programma-overzichten zoals de Firesides-flyer. Dit verschijnt direct in de wijkkrant,
-            zonder tussenstap.
+            {at(lang, "Handig voor programma-overzichten zoals de Firesides-flyer. Dit verschijnt direct in de wijkkrant, zonder tussenstap.")}
           </p>
           <form className="admin-post" onSubmit={submitPdfPost}>
-            <label className="field-label">Categorie</label>
+            <label className="field-label">{at(lang, "Categorie")}</label>
             <select
               value={pdfPostForm.category}
               onChange={(e) => setPdfPostForm((f) => ({ ...f, category: e.target.value }))}
@@ -1167,55 +1169,55 @@ export default function AdminPage() {
                 </option>
               ))}
             </select>
-            <label className="field-label">Vereniging (optioneel)</label>
+            <label className="field-label">{at(lang, "Vereniging (optioneel)")}</label>
             <select value={pdfPostForm.org} onChange={(e) => setPdfPostForm((f) => ({ ...f, org: e.target.value }))}>
-              <option value="">Geen vereniging</option>
+              <option value="">{at(lang, "Geen vereniging")}</option>
               {ORGANIZATIONS.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
                 </option>
               ))}
             </select>
-            <label className="field-label">Titel (optioneel)</label>
+            <label className="field-label">{at(lang, "Titel (optioneel)")}</label>
             <input
               value={pdfPostForm.title}
               onChange={(e) => setPdfPostForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="Bijv. Summer Firesides 2026"
+              placeholder={at(lang, "Bijv. Summer Firesides 2026")}
             />
-            <label className="field-label">Tekst</label>
+            <label className="field-label">{at(lang, "Tekst")}</label>
             <textarea
               rows={4}
               value={pdfPostForm.text}
               onChange={(e) => setPdfPostForm((f) => ({ ...f, text: e.target.value }))}
-              placeholder="Korte aankondiging — het volledige programma staat in de PDF."
+              placeholder={at(lang, "Korte aankondiging — het volledige programma staat in de PDF.")}
             />
-            <label className="field-label">Tekst op de PDF-knop (optioneel)</label>
+            <label className="field-label">{at(lang, "Tekst op de PDF-knop (optioneel)")}</label>
             <input
               value={pdfPostForm.pdfName}
               onChange={(e) => setPdfPostForm((f) => ({ ...f, pdfName: e.target.value }))}
-              placeholder="Bijv. Bekijk het volledige programma"
+              placeholder={at(lang, "Bijv. Bekijk het volledige programma")}
             />
-            <label className="field-label">PDF-bestand</label>
+            <label className="field-label">{at(lang, "PDF-bestand")}</label>
             <input type="file" accept="application/pdf" onChange={onPdfPostFile} style={{ marginBottom: 16 }} />
-            {pdfPostFile && <p className="hint" style={{ marginTop: -10 }}>Gekozen: {pdfPostFile.name}</p>}
+            {pdfPostFile && <p className="hint" style={{ marginTop: -10 }}>{at(lang, "Gekozen:")} {pdfPostFile.name}</p>}
             <button className="btn btn-sm" disabled={pdfPostBusy}>
-              <UploadCloud size={13} /> {pdfPostBusy ? "Bezig..." : "Plaatsen in de wijkkrant"}
+              <UploadCloud size={13} /> {pdfPostBusy ? at(lang, "Bezig...") : at(lang, "Plaatsen in de wijkkrant")}
             </button>
           </form>
 
           <div className="section-title" style={{ marginTop: 32 }}>
-            <BookOpen size={18} /> Archief — oude edities ({archive.length})
+            <BookOpen size={18} /> {at(lang, "Archief — oude edities")} ({archive.length})
           </div>
           <form className="admin-post" onSubmit={uploadArchive}>
-            <label className="field-label">Titel</label>
+            <label className="field-label">{at(lang, "Titel")}</label>
             <input
               value={archiveForm.title}
               onChange={(e) => setArchiveForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="Bijv. Nieuwsbrief wijk Den Haag"
+              placeholder={at(lang, "Bijv. Nieuwsbrief wijk Den Haag")}
             />
             <div style={{ display: "flex", gap: 10 }}>
               <div style={{ flex: 1 }}>
-                <label className="field-label">Maand</label>
+                <label className="field-label">{at(lang, "Maand")}</label>
                 <select
                   value={archiveForm.month}
                   onChange={(e) => setArchiveForm((f) => ({ ...f, month: Number(e.target.value) }))}
@@ -1228,7 +1230,7 @@ export default function AdminPage() {
                 </select>
               </div>
               <div style={{ flex: 1 }}>
-                <label className="field-label">Jaar</label>
+                <label className="field-label">{at(lang, "Jaar")}</label>
                 <input
                   type="text"
                   value={archiveForm.year}
@@ -1236,21 +1238,21 @@ export default function AdminPage() {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label className="field-label">Taal</label>
+                <label className="field-label">{at(lang, "Taal")}</label>
                 <select
                   value={archiveForm.lang}
                   onChange={(e) => setArchiveForm((f) => ({ ...f, lang: e.target.value }))}
                 >
-                  <option value="nl">Nederlands</option>
-                  <option value="en">Engels</option>
+                  <option value="nl">{at(lang, "Nederlands")}</option>
+                  <option value="en">{at(lang, "Engels")}</option>
                 </select>
               </div>
             </div>
-            <label className="field-label">PDF-bestand</label>
+            <label className="field-label">{at(lang, "PDF-bestand")}</label>
             <input type="file" accept="application/pdf" onChange={onArchiveFile} style={{ marginBottom: 16 }} />
-            {archiveFile && <p className="hint" style={{ marginTop: -10 }}>Gekozen: {archiveFile.name}</p>}
+            {archiveFile && <p className="hint" style={{ marginTop: -10 }}>{at(lang, "Gekozen:")} {archiveFile.name}</p>}
             <button className="btn btn-sm" disabled={archiveBusy}>
-              <UploadCloud size={13} /> {archiveBusy ? "Bezig..." : "Toevoegen aan archief"}
+              <UploadCloud size={13} /> {archiveBusy ? at(lang, "Bezig...") : at(lang, "Toevoegen aan archief")}
             </button>
           </form>
           {archive.map((a) => (
@@ -1273,7 +1275,7 @@ export default function AdminPage() {
           ))}
 
           <div className="section-title" style={{ marginTop: 32 }}>
-            <Palette size={18} /> Website-uiterlijk
+            <Palette size={18} /> {at(lang, "Website-uiterlijk")}
           </div>
           <div className="admin-post">
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
@@ -1282,18 +1284,17 @@ export default function AdminPage() {
                 className="btn btn-sm btn-outline"
                 disabled={settingsBusy}
                 onClick={() => {
-                  if (confirm("Alle uiterlijk-instellingen terugzetten naar de standaard? Dit kan niet ongedaan worden gemaakt.")) {
+                  if (confirm(at(lang, "Alle uiterlijk-instellingen terugzetten naar de standaard? Dit kan niet ongedaan worden gemaakt."))) {
                     saveSettings(DEFAULTS);
                   }
                 }}
               >
-                <X size={13} /> Terug naar standaard
+                <X size={13} /> {at(lang, "Terug naar standaard")}
               </button>
             </div>
-            <label className="field-label">Foto('s) bovenin (bijv. de tempel, of iets feestelijks)</label>
+            <label className="field-label">{at(lang, "Foto('s) bovenin (bijv. de tempel, of iets feestelijks)")}</label>
             <p className="hint" style={{ marginTop: -4 }}>
-              1 foto vult de hele header. Vanaf 2 foto's krijgt de header meer ruimte en verschijnen ze als een
-              leuk fotorijtje.
+              {at(lang, "1 foto vult de hele header. Vanaf 2 foto's krijgt de header meer ruimte en verschijnen ze als een leuk fotorijtje.")}
             </p>
             <div className="thumb-row" style={{ marginTop: 10 }}>
               {(settings.headerImages || []).map((src) => (
@@ -1307,7 +1308,7 @@ export default function AdminPage() {
               {(settings.headerImages || []).length < 5 && (
                 <label className="thumb-add" style={{ cursor: settingsBusy ? "wait" : "pointer" }}>
                   <ImagePlus size={16} />
-                  Toevoegen
+                  {at(lang, "Toevoegen")}
                   <input
                     type="file"
                     accept="image/*"
@@ -1322,7 +1323,7 @@ export default function AdminPage() {
 
             <div style={{ display: "flex", gap: 20, marginTop: 20, flexWrap: "wrap" }}>
               <div>
-                <label className="field-label">Achtergrondkleur wijkkrant</label>
+                <label className="field-label">{at(lang, "Achtergrondkleur wijkkrant")}</label>
                 <input
                   type="color"
                   value={settings.pageBackgroundColor || "#f5efe6"}
@@ -1331,7 +1332,7 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="field-label">Achtergrondkleur redactiepagina</label>
+                <label className="field-label">{at(lang, "Achtergrondkleur redactiepagina")}</label>
                 <input
                   type="color"
                   value={settings.adminBackgroundColor || "#e7edf3"}
@@ -1342,7 +1343,7 @@ export default function AdminPage() {
             </div>
 
             <label className="field-label" style={{ marginTop: 20, display: "block" }}>
-              Achtergrondfoto wijkkrant (optioneel, i.p.v. een kleur)
+              {at(lang, "Achtergrondfoto wijkkrant (optioneel, i.p.v. een kleur)")}
             </label>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <input
@@ -1356,7 +1357,7 @@ export default function AdminPage() {
                   className="btn btn-sm btn-outline"
                   onClick={() => saveSettings({ pageBackgroundImage: null })}
                 >
-                  <X size={12} /> Achtergrondfoto verwijderen
+                  <X size={12} /> {at(lang, "Achtergrondfoto verwijderen")}
                 </button>
               )}
             </div>
