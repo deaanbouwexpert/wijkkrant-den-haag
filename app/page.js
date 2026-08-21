@@ -34,6 +34,13 @@ function PostCard({ post, lang, translating, onImageClick }) {
   const shownText = isLong && !expanded ? truncateText(text, TEXT_TRUNCATE_LENGTH) : text;
   return (
     <article className="card" style={{ background: c.paper }}>
+      <div className="card-meta card-meta-top">
+        <span className="tag" style={{ background: c.color }}>
+          {c.label}
+        </span>
+        {org && <span className="org-tag">{org.label}</span>}
+        <span className="card-date">{fmtDate(post.createdAt, lang)}</span>
+      </div>
       {hasImages && (
         <div
           className={`card-photos ${isSinglePoster ? "single" : ""}`}
@@ -51,13 +58,6 @@ function PostCard({ post, lang, translating, onImageClick }) {
         </div>
       )}
       <div className={`card-body ${hasImages ? "with-photo" : ""}`}>
-        <div className="card-meta">
-          <span className="tag" style={{ background: c.color }}>
-            {c.label}
-          </span>
-          {org && <span className="org-tag">{org.label}</span>}
-          <span className="card-date">{fmtDate(post.createdAt, lang)}</span>
-        </div>
         {title && (
           <h3 className="card-title" style={{ color: c.color }}>
             {title}

@@ -315,8 +315,9 @@ body {
 .card-body {
   padding: 24px;
 }
-.card-body.with-photo {
-  padding-top: 32px;
+.card-meta-top {
+  padding: 20px 24px 0;
+  margin-bottom: 14px;
 }
 .tag {
   display: inline-flex;
