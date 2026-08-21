@@ -532,6 +532,17 @@ export default function AdminPage() {
     setPdfPostBusy(false);
   };
 
+  const [autoBackups, setAutoBackups] = useState([]);
+  const [autoBackupsOpen, setAutoBackupsOpen] = useState(false);
+
+  const loadAutoBackups = async () => {
+    const res = await fetch("/api/admin/auto-backups", { headers: { "x-admin-password": pw } });
+    if (res.ok) {
+      const data = await res.json();
+      setAutoBackups(data.backups || []);
+    }
+  };
+
   const downloadBackup = async () => {
     const res = await fetch("/api/admin/backup", { headers: { "x-admin-password": pw } });
     if (!res.ok) {
@@ -702,11 +713,46 @@ export default function AdminPage() {
         </div>
       ) : (
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                if (!autoBackupsOpen) loadAutoBackups();
+                setAutoBackupsOpen((v) => !v);
+              }}
+            >
+              <Clock size={13} /> {at(lang, "Automatische back-ups (wekelijks)")}
+            </button>
             <button type="button" className="btn btn-sm btn-outline" onClick={downloadBackup}>
               <Download size={13} /> {at(lang, "Back-up downloaden")}
             </button>
           </div>
+          {autoBackupsOpen && (
+            <div className="admin-post" style={{ marginBottom: 16 }}>
+              <p className="hint" style={{ marginTop: 0 }}>
+                {at(
+                  lang,
+                  "Elke week wordt hier automatisch een back-up bewaard, in een afgeschermde opslagplek. Oudere back-ups (90+ dagen) worden vanzelf opgeruimd."
+                )}
+              </p>
+              {autoBackups.length === 0 && (
+                <p className="hint">{at(lang, "Nog geen automatische back-up gemaakt — de eerste komt na de eerstvolgende geplande run.")}</p>
+              )}
+              {autoBackups.map((b) => (
+                <div className="published-row" key={b.name}>
+                  <span style={{ fontSize: 14 }}>{b.name}</span>
+                  {b.url ? (
+                    <a href={b.url} className="btn btn-sm btn-outline" download>
+                      <Download size={13} /> {at(lang, "Downloaden")}
+                    </a>
+                  ) : (
+                    <span className="hint">—</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           <div className="section-title">
             <Clock size={18} /> {at(lang, "Wacht op goedkeuring")} ({pending.length})
           </div>
