@@ -39,10 +39,20 @@ async function translateFields(fields, targetLang) {
     }),
   });
   const data = await res.json();
+  if (data?.error) {
+    throw new Error(data.error.message || "Anthropic API-fout");
+  }
   const raw = data?.content?.[0]?.text?.trim() || "{}";
-  const cleaned = raw.replace(/^```json\s*|\s*```$/g, "");
+  // Verwijder eventuele code-fences (```json of gewoon ```), waar Claude ook mee begint.
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  let jsonText = cleaned;
+  // Als er per ongeluk nog tekst voor/na het JSON-object staat: pak het buitenste {...} object eruit.
+  if (!jsonText.startsWith("{")) {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) jsonText = match[0];
+  }
   try {
-    const parsed = JSON.parse(cleaned);
+    const parsed = JSON.parse(jsonText);
     const result = {};
     for (const key of Object.keys(fields)) {
       result[key] = typeof parsed[key] === "string" ? parsed[key] : fields[key];

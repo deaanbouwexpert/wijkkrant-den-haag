@@ -87,6 +87,11 @@ function PostCard({ post, lang, translating, onImageClick }) {
             {t(lang, "translating")}
           </p>
         )}
+        {lang !== "nl" && tr?.note && (
+          <p className="hint" style={{ marginTop: 8, color: "#bd5678" }}>
+            ⚠️ {tr.note}
+          </p>
+        )}
       </div>
     </article>
   );
